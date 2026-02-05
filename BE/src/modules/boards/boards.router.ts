@@ -12,12 +12,23 @@ import {
 	UpdateInformationBoardRequestSchema,
 } from './dtos';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
+import {
+	createListRequestSchema,
+	createListRequestValidationSchema,
+	listResponseDtoSchema,
+	updateListRequestParams,
+} from '../lists/dtos';
+import { ListsController } from '../lists/list.controller';
+import { validateRequestMiddleware } from '@/common/middlewares/validationRequest.middleware';
+import { ListPermissionEnum } from '@/common/enums/permissions';
 
 const boardsController = new BoardsController();
+const listsController = new ListsController();
 export const boardsRegistry = new OpenAPIRegistry();
 const router = express.Router();
 
 autoBindUtil(boardsController);
+autoBindUtil(listsController);
 
 boardsRegistry.registerPath({
 	method: 'get',
@@ -58,5 +69,41 @@ router.delete(
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.DELETE_BOARD),
 	boardsController.archiveBoard,
+);
+
+boardsRegistry.registerPath({
+	method: 'get',
+	path: '/boards/{boardId}/lists',
+	tags: ['Boards'],
+	request: GetBoardByIdRequestSchema,
+	responses: createApiResponse(
+		listResponseDtoSchema.array(),
+		'Success',
+		StatusCodes.OK,
+	),
+});
+
+router.get(
+	'/:boardId/lists',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(ListPermissionEnum.GET_LIST),
+	listsController.getAllListsByBoardId,
+);
+
+boardsRegistry.registerPath({
+	method: 'post',
+	path: '/boards/{boardId}/lists',
+	tags: ['Boards'],
+	request: createListRequestSchema,
+	responses: createApiResponse(listResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+
+router.post(
+	'/:boardId/lists',
+
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(ListPermissionEnum.CREATE_LIST),
+
+	listsController.createList,
 );
 export const boardsRouter = router;

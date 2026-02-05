@@ -39,6 +39,7 @@ app.use('/auth', Modules.authRouter);
 app.use('/users', Modules.usersRouter);
 app.use('/projects', Modules.projectsRouter);
 app.use('/boards', Modules.boardsRouter);
+app.use('/lists', Modules.listsRouter);
 app.use(errorHandlerMiddleware);
 
 app.use(openAPIRouter);
