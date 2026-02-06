@@ -1,0 +1,225 @@
+import { boardMembers } from './../../models/modelSchema/boardMembersSchema';
+import { ListsRepository } from './../lists/list.repository';
+import { Exception } from '@tsed/exceptions';
+
+import { HttpResponseBodySuccessDto } from '@/common/dtos/httpResponseBodySuccess.dto';
+import { CardsRepository } from './card.repository';
+
+import { calculateNewPosition } from '@/common/utils/calculateNewPosition';
+import { BoardsRepository } from '../boards/boards.repository';
+import { BoardMembersRepository } from '../boardMembers/boardMember.repository';
+
+export class CardsService {
+	constructor(
+		private readonly cardsRepository: CardsRepository = new CardsRepository(),
+		private readonly listsRepository: ListsRepository = new ListsRepository(),
+		private readonly boardsRepository: BoardsRepository = new BoardsRepository(),
+		private readonly boardMembersRepository: BoardMembersRepository = new BoardMembersRepository(),
+	) {}
+
+	async getAllCardsByListId(
+		listId: string,
+		userId: string,
+	): Promise<HttpResponseBodySuccessDto<any[]> | Exception> {
+		try {
+			const list = await this.listsRepository.getListById(listId);
+			if (!list) {
+				throw new Exception(404, 'List not found');
+			}
+
+			const cards = await this.cardsRepository.getAllCardsByListId(listId);
+			return {
+				success: true,
+				data: cards,
+			};
+		} catch (error) {
+			console.error('[CardsService] getAllCardsByListId error:', error);
+			throw error;
+		}
+	}
+
+	async getCardById(cardId: string): Promise<any | Exception> {
+		try {
+			return await this.cardsRepository.getCardById(cardId);
+		} catch (error) {
+			console.error('[CardsService] getCardById error:', error);
+			throw error;
+		}
+	}
+
+	async createCard(
+		title: string,
+		listId: string,
+		userId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		try {
+			const list = await this.listsRepository.getListById(listId);
+			if (!list) {
+				throw new Exception(404, 'List not found');
+			}
+
+			const lastCard = await this.cardsRepository.getLastCardByListId(listId);
+			const position = lastCard ? lastCard.position + 1 : 1;
+			const newCard = await this.cardsRepository.createCard(
+				title,
+				listId,
+				position,
+			);
+			return {
+				success: true,
+				data: newCard,
+			};
+		} catch (error) {
+			console.error('[CardsService] createCard error:', error);
+			throw error;
+		}
+	}
+
+	async moveCard(
+		cardId: string,
+		targetListId: string,
+		userId: string,
+		beforeCardId?: string,
+		afterCardId?: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		try {
+			const card = await this.cardsRepository.getCardById(cardId);
+			if (!card) throw new Exception(404, 'Card not found');
+
+			const sourceList = await this.listsRepository.getListById(card.listId);
+			if (!sourceList) throw new Exception(404, 'Source list not found');
+
+			const targetList = await this.listsRepository.getListById(targetListId);
+			if (!targetList) throw new Exception(404, 'Target list not found');
+
+			if (sourceList.boardId !== targetList.boardId) {
+				throw new Exception(
+					400,
+					'Cannot move card to a list in a different board',
+				);
+			}
+
+			const before = beforeCardId
+				? await this.cardsRepository.getCardInList(beforeCardId, targetListId)
+				: null;
+			const after = afterCardId
+				? await this.cardsRepository.getCardInList(afterCardId, targetListId)
+				: null;
+
+			const newPosition = calculateNewPosition(before?.position, after?.position);
+			console.log('New Position:', newPosition);
+			const updatedCard = await this.cardsRepository.updateCardPosition(
+				targetListId,
+				cardId,
+				newPosition,
+			);
+			console.log('Updated Card:', updatedCard);
+			return {
+				success: true,
+				data: updatedCard,
+			};
+		} catch (error) {
+			console.error('[CardsService] moveCard error:', error);
+			throw error;
+		}
+	}
+
+	async updateInformationCard(
+		cardId: string,
+		userId: string,
+		title?: string,
+		description?: string,
+		members?: string[],
+		dueDate?: Date,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		try {
+			console.log('[CardsService] updateInformationCard called with:', {
+				cardId,
+				userId,
+			});
+			const card = await this.cardsRepository.getCardById(cardId);
+			if (!card) throw new Exception(404, 'Card not found');
+
+			const list = await this.listsRepository.getListById(card.listId);
+			if (!list) {
+				throw new Exception(404, 'List not found');
+			}
+
+			const isMember = await this.boardMembersRepository.isUserMemberOfBoard(
+				list.boardId,
+				userId,
+			);
+			if (!isMember) {
+				throw new Exception(403, 'User is not a member of the board');
+			}
+
+			const boardMembers = await this.boardMembersRepository.getBoardMembers(
+				list.boardId,
+			);
+			const boardMemberIds = boardMembers.map((member) => member.userId);
+
+			const updatedCard = await this.cardsRepository.updateInformationCard(cardId, {
+				title,
+				description,
+				dueDate,
+			});
+
+			if (members !== undefined) {
+				const invalidMemberIds = members.filter(
+					(memberId) => !boardMemberIds.includes(memberId),
+				);
+				if (invalidMemberIds.length > 0) {
+					throw new Exception(
+						400,
+						`These members are not part of the board: ${invalidMemberIds.join(', ')}`,
+					);
+				}
+
+				const currentMembers =
+					await this.cardsRepository.getMembersInCard(cardId);
+				const currentMemberIds = currentMembers.map((member) => member.userId); //chuyen sang array chi chua id
+
+				const membersToAdd = members.filter(
+					(memberId) => !currentMemberIds.includes(memberId),
+				); // IDs can be added
+				const membersToRemove = currentMemberIds.filter(
+					(memberId) => !members.includes(memberId),
+				); // IDs can be removed
+
+				await this.cardsRepository.addMemberToCard(cardId, membersToAdd);
+				await this.cardsRepository.removeMemberFromCard(cardId, membersToRemove);
+			}
+			return {
+				success: true,
+				data: updatedCard,
+			};
+		} catch (error) {
+			console.error('[CardsService] updateInformationCard error:', error);
+			throw error;
+		}
+	}
+
+	async softDeleteCard(
+		cardId: string,
+		userId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		try {
+			const card = await this.cardsRepository.getCardById(cardId);
+			if (!card) throw new Exception(404, 'Card not found');
+
+			const list = await this.listsRepository.getListById(card.listId);
+			if (!list) {
+				throw new Exception(404, 'List not found');
+			}
+
+			const deletedCard = await this.cardsRepository.softDeleteCard(cardId);
+			return {
+				success: true,
+				data: deletedCard,
+			};
+		} catch (error) {
+			console.error('[CardsService] softDeleteCard error:', error);
+			throw error;
+		}
+	}
+}
