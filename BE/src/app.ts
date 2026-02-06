@@ -41,6 +41,7 @@ app.use('/projects', Modules.projectsRouter);
 app.use('/boards', Modules.boardsRouter);
 app.use('/lists', Modules.listsRouter);
 app.use('/cards', Modules.cardsRouter);
+app.use('/invitations', Modules.invitationsRouter);
 
 app.use(errorHandlerMiddleware);
 
