@@ -3,9 +3,10 @@ import { CreateProject } from "@/components/projects/CreateProject";
 
 import { Card } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+
 import { useProjects } from "@/hooks/useProjects";
 
-import { Trello } from "lucide-react";
+import { Trello, EllipsisVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CreateBoard } from "@/components/boards/CreateBoard";
 export function Dashboard() {
@@ -17,8 +18,9 @@ export function Dashboard() {
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
       <SidebarInset className="relative">
-        <div className="fixed w-full bg-white z-10 shadow-md">
+        <div className="fixed w-full bg-white z-10 shadow-md flex  items-center">
           <h1 className="text-2xl font-bold p-4 ">Dashboard</h1>
+
           <hr />
         </div>
         <main className="pt-15">
@@ -30,6 +32,7 @@ export function Dashboard() {
                 tasks efficiently.
               </div>
             </div>
+
             <div>
               <CreateProject />
             </div>
@@ -47,13 +50,20 @@ export function Dashboard() {
               !error &&
               projects.map((project) => (
                 <div key={project.id}>
-                  <div>
-                    <div className="text-2xl font-medium mb-2 flex items-center gap-2">
-                      <Trello />
-                      {project.name}
+                  <div className="flex justify-between items-start mr-8">
+                    <div>
+                      <Link to={`/projects/${project.id}`}>
+                        <div className="text-2xl font-medium mb-2 flex items-center gap-2">
+                          <Trello />
+                          {project.name}
+                        </div>
+                      </Link>
+                      <div className="text-md text-gray-600 mb-6 flex items-center gap-2">
+                        {project.description}
+                      </div>
                     </div>
-                    <div className="text-md text-gray-600 mb-6 flex items-center gap-2">
-                      {project.description}
+                    <div className="flex items-center gap-4">
+                      <EllipsisVertical />
                     </div>
                   </div>
 

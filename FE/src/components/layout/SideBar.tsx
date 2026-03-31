@@ -26,7 +26,7 @@ import { Link } from "react-router-dom";
 
 export function AppSidebar() {
   const { projects, loading, error } = useProjects();
-  console.log("Projects in Sidebar:", projects, loading, error);
+
   return (
     <Sidebar>
       <Link to="/dashboard">
@@ -52,7 +52,7 @@ export function AppSidebar() {
 
           <SidebarGroupContent className="pl-6">
             {loading && <div>Loading...</div>}
-            {error && <div>Error: {error}</div>}
+            {error && <div>Error: Failed to fetch projects</div>}
 
             {!loading && !error && projects.length === 0 && (
               <div>No projects found.</div>
