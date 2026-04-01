@@ -24,14 +24,22 @@ import { ListPermissionEnum } from '@/common/enums/permissions';
 import { UpdateRoleMemberBoardRequestSchema } from './dtos/requests/updateRoleMember.request';
 
 import z from 'zod';
+import {
+	createLabelRequestSchema,
+	createLabelRequestValidationSchema,
+} from '../labels/dtos/requests';
+import { LabelResponseDtoSchema } from '../labels/dtos/responses';
+import { LabelsController } from '../labels/labels.controller';
 
 const boardsController = new BoardsController();
 const listsController = new ListsController();
+const labelsController = new LabelsController();
 export const boardsRegistry = new OpenAPIRegistry();
 const router = express.Router();
 
 autoBindUtil(boardsController);
 autoBindUtil(listsController);
+autoBindUtil(labelsController);
 
 boardsRegistry.registerPath({
 	method: 'get',
@@ -147,6 +155,39 @@ router.post(
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(ListPermissionEnum.CREATE_LIST),
 	listsController.createList,
+);
+
+boardsRegistry.registerPath({
+	method: 'get',
+	path: '/boards/{boardId}/labels',
+	tags: ['Boards'],
+	request: GetBoardByIdRequestSchema,
+	responses: createApiResponse(
+		LabelResponseDtoSchema.array(),
+		'Success',
+		StatusCodes.OK,
+	),
+});
+router.get(
+	'/:boardId/labels',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.GET_BOARD),
+	labelsController.getLabelsByBoardId,
+);
+
+boardsRegistry.registerPath({
+	method: 'post',
+	path: '/boards/{boardId}/labels',
+	tags: ['Boards'],
+	request: createLabelRequestSchema,
+	responses: createApiResponse(LabelResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+
+router.post(
+	'/:boardId/labels',
+	authMiddleware.verifyAccessToken,
+	validateRequestMiddleware(createLabelRequestValidationSchema),
+	labelsController.createLabel,
 );
 
 export const boardsRouter = router;

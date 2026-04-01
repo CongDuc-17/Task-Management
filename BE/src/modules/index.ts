@@ -1,3 +1,4 @@
+import { labels } from './../models/modelSchema/labelsSchema';
 import { authRegistry, authRouter } from './auth/auth.router';
 import { healthCheckRegistry, healthCheckRouter } from './healthCheck/healthCheck.router';
 import { projectsRegistry, projectsRouter } from './projects/project.router';
@@ -6,6 +7,7 @@ import { boardsRegistry, boardsRouter } from './boards/boards.router';
 import { listsRegistry, listsRouter } from './lists/list.router';
 import { cardsRegistry, cardsRouter } from './cards/card.router';
 import { invitationsRegistry, invitationsRouter } from './invitations/invitation.router';
+import { labelsRegistry, labelsRouter } from './labels/labels.router';
 export const Registries = [
 	healthCheckRegistry,
 	authRegistry,
@@ -14,6 +16,7 @@ export const Registries = [
 	boardsRegistry,
 	listsRegistry,
 	cardsRegistry,
+	labelsRegistry,
 	invitationsRegistry,
 ];
 
@@ -25,5 +28,6 @@ export const Modules = {
 	boardsRouter,
 	listsRouter,
 	cardsRouter,
+	labelsRouter,
 	invitationsRouter,
 };

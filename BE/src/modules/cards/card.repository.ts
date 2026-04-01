@@ -19,6 +19,31 @@ export class CardsRepository {
 	async getCardById(cardId: string) {
 		return this.prismaService.cards.findUnique({
 			where: { id: cardId },
+			include: {
+				cardMembers: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								avatar: true,
+							},
+						},
+					},
+				},
+				cardLabels: {
+					include: {
+						label: {
+							select: {
+								id: true,
+								name: true,
+								color: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 
@@ -107,6 +132,16 @@ export class CardsRepository {
 	async getMembersInCard(cardId: string) {
 		return this.prismaService.cardMembers.findMany({
 			where: { cardId: cardId },
+			include: {
+				user: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						avatar: true,
+					},
+				},
+			},
 		});
 	}
 }

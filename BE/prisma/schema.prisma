@@ -53,21 +53,15 @@ enum ProjectStatusEnum {
   ARCHIVED @map("archived")
 }
 
-
-
 enum BoardStatusEnum {
   ACTIVE   @map("active")
   ARCHIVED @map("archived")
 }
 
-
-
-
-
 enum InvitationStatusEnum {
-  PENDING @map("pending")
-  ACCEPTED @map("accepted")
-  EXPIRED @map("expired")
+  PENDING   @map("pending")
+  ACCEPTED  @map("accepted")
+  EXPIRED   @map("expired")
   CANCELLED @map("cancelled")
 }
 
@@ -75,6 +69,7 @@ enum InvitationTypeEnum {
   EMAIL @map("email")
   LINK  @map("link")
 }
+
 model users {
   id        String         @id @default(uuid())
   email     String         @unique
@@ -101,9 +96,12 @@ model users {
   usersRoles     usersRoles[]
   projectMembers projectMembers[]
 
-  boardMembers   boardMembers[]
-  cardMembers    cardMembers[]
-  invitations    invitations[]
+  boardMembers    boardMembers[]
+  cardMembers     cardMembers[]
+  cardComments    cardComments[]
+  cardAttachments cardAttachments[]
+  cardActivity    cardActivity[]
+  invitations     invitations[]
 
   @@map("Users")
 }
@@ -201,18 +199,17 @@ model permissions {
 }
 
 model projects {
-  id             String            @id @default(uuid())
-  name           String
-  description    String?
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
-  deletedAt      DateTime?         @map("deleted_at")
-  members        projectMembers[]
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  members     projectMembers[]
 
-  
-  status         ProjectStatusEnum @default(ACTIVE)
-  boards         boards[]
-  invitation     invitations[]      @relation("ProjectInvitation")
+  status     ProjectStatusEnum @default(ACTIVE)
+  boards     boards[]
+  invitation invitations[]     @relation("ProjectInvitation")
 
   @@map("Projects")
 }
@@ -233,19 +230,20 @@ model projectMembers {
 }
 
 model boards {
-  id           String          @id @default(uuid())
-  name         String
-  description  String?
-  projectId    String          @map("project_id")
-  project      projects        @relation(fields: [projectId], references: [id])
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
-  deletedAt    DateTime?       @map("deleted_at")
-  status       BoardStatusEnum @default(ACTIVE)
- 
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  projectId   String          @map("project_id")
+  project     projects        @relation(fields: [projectId], references: [id])
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  status      BoardStatusEnum @default(ACTIVE)
+
   boardMembers boardMembers[]
-  invitation   invitations[]    @relation("BoardInvitation")
+  invitation   invitations[]  @relation("BoardInvitation")
   lists        lists[]
+  labels       labels[]
 
   @@map("Boards")
 }
@@ -267,8 +265,6 @@ model boardMembers {
   @@unique([userId, boardId])
   @@map("Board_Members")
 }
-
-
 
 model lists {
   id        String    @id @default(uuid())
@@ -292,11 +288,16 @@ model cards {
   list        lists   @relation(fields: [listId], references: [id])
   position    Float
 
-  dueDate     DateTime?     @map("due_date")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  deletedAt   DateTime?     @map("deleted_at")
+  dueDate     DateTime?         @map("due_date")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  deletedAt   DateTime?         @map("deleted_at")
   cardMembers cardMembers[]
+  cardLabels  cardLabels[]
+  checklists  checklists[]
+  comments    cardComments[]
+  attachments cardAttachments[]
+  activity    cardActivity[]
 
   @@map("Cards")
 }
@@ -311,25 +312,108 @@ model cardMembers {
   @@map("Card_Members")
 }
 
+model labels {
+  id         String       @id @default(uuid())
+  name       String
+  color      String
+  boardId    String       @map("board_id")
+  board      boards       @relation(fields: [boardId], references: [id])
+  cardLabels cardLabels[]
+  createdAt  DateTime     @default(now()) @map("created_at")
 
+  @@unique([boardId, name])
+  @@map("Labels")
+}
 
+model cardLabels {
+  id      String @id @default(uuid())
+  cardId  String @map("card_id")
+  card    cards  @relation(fields: [cardId], references: [id])
+  labelId String @map("label_id")
+  label   labels @relation(fields: [labelId], references: [id])
+
+  @@unique([cardId, labelId])
+  @@map("Card_Labels")
+}
+
+model checklists {
+  id             String           @id @default(uuid())
+  cardId         String           @map("card_id")
+  card           cards            @relation(fields: [cardId], references: [id])
+  title          String
+  checklistItems checklistItems[]
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  @@map("Checklists")
+}
+
+model checklistItems {
+  id          String     @id @default(uuid())
+  checklistId String     @map("checklist_id")
+  checklist   checklists @relation(fields: [checklistId], references: [id])
+  title       String
+  completed   Boolean    @default(false)
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@map("Checklist_Items")
+}
+
+model cardComments {
+  id        String   @id @default(uuid())
+  cardId    String   @map("card_id")
+  card      cards    @relation(fields: [cardId], references: [id])
+  userId    String   @map("user_id")
+  user      users    @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("Card_Comments")
+}
+
+model cardAttachments {
+  id        String   @id @default(uuid())
+  cardId    String   @map("card_id")
+  card      cards    @relation(fields: [cardId], references: [id])
+  userId    String   @map("user_id")
+  user      users    @relation(fields: [userId], references: [id])
+  fileName  String   @map("file_name")
+  fileUrl   String   @map("file_url")
+  fileSize  Int      @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("Card_Attachments")
+}
+
+model cardActivity {
+  id        String   @id @default(uuid())
+  cardId    String   @map("card_id")
+  card      cards    @relation(fields: [cardId], references: [id])
+  userId    String   @map("user_id")
+  user      users    @relation(fields: [userId], references: [id])
+  action    String // "created", "updated", "moved", "labeled"
+  details   String? // JSON details về thay đổi
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("Card_Activity")
+}
 
 model invitations {
-  id        String               @id @default(uuid())
-  projectId String?               @map("project_id")
-  boardId   String?              @map("board_id")
-  email     String?
-  roleId    String               @map("role_id")
-  token     String               @unique
-  type      InvitationTypeEnum   @default(EMAIL)
-  status    InvitationStatusEnum @default(PENDING)
-  createdBy String               @map("created_by")
-  owner     users                @relation(fields: [createdBy], references: [id])
-  createdAt DateTime             @default(now())
-  expiresAt DateTime             @map("expires_at")
-  acceptedAt DateTime?           @map("accepted_at")
-  project   projects?             @relation("ProjectInvitation", fields: [projectId], references: [id])
-  board     boards?               @relation("BoardInvitation", fields: [boardId], references: [id])
+  id         String               @id @default(uuid())
+  projectId  String?              @map("project_id")
+  boardId    String?              @map("board_id")
+  email      String?
+  roleId     String               @map("role_id")
+  token      String               @unique
+  type       InvitationTypeEnum   @default(EMAIL)
+  status     InvitationStatusEnum @default(PENDING)
+  createdBy  String               @map("created_by")
+  owner      users                @relation(fields: [createdBy], references: [id])
+  createdAt  DateTime             @default(now())
+  expiresAt  DateTime             @map("expires_at")
+  acceptedAt DateTime?            @map("accepted_at")
+  project    projects?            @relation("ProjectInvitation", fields: [projectId], references: [id])
+  board      boards?              @relation("BoardInvitation", fields: [boardId], references: [id])
 
   @@index([email, status])
   @@map("Invitations")
