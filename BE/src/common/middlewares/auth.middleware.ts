@@ -20,12 +20,13 @@ import { BaseAutoBindMiddleware } from './baseAutoBindmiddleware';
 import { jwtConfig } from '@/configs';
 import { UserInformationDto } from '@/modules/users/dtos';
 import { PermissionsRepository } from '@/modules/permissions/permissions.repository';
-
+import { PrismaService } from '@/modules/database/prisma.service';
 class AuthMiddleware extends BaseAutoBindMiddleware {
 	constructor(private readonly userRepository = new UsersRepository()) {
 		super();
 	}
 	private readonly permissionsRepository = new PermissionsRepository();
+	private readonly prismaService = new PrismaService();
 
 	async verifyAccessToken(
 		req: Request,
@@ -218,7 +219,19 @@ class AuthMiddleware extends BaseAutoBindMiddleware {
 					throw new UnauthorizedException('User not authenticated');
 				}
 
-				const boardId = req.params.boardId as string;
+				let boardId = req.params.boardId as string;
+				const listId = req.params.listId as string;
+				if (!boardId && listId) {
+					const list = await this.prismaService.lists.findUnique({
+						where: { id: listId },
+
+						select: { boardId: true, name: true },
+					});
+					if (list) {
+						boardId = list.boardId;
+					}
+				}
+
 				if (!boardId) {
 					throw new NotFoundException('Board ID not found');
 				}

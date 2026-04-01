@@ -36,9 +36,8 @@ export class BoardsController {
 	}
 
 	async getBoardById(req: Request): Promise<Response> {
-		console.log(req.params);
 		const boardId = req.params.boardId as string;
-		console.log('boardId:', boardId);
+
 		const userId = (req.user as { id: string }).id;
 		const result = await this.boardsService.getBoardById(boardId);
 		if (result instanceof Exception) {
