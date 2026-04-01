@@ -148,30 +148,6 @@ class AuthMiddleware extends BaseAutoBindMiddleware {
 	neu co thi next()
 	khong thi throw exception
 	*/
-	verifyPermission(permission: string) {
-		return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-			try {
-				const user = req.user as UserInformationDto;
-				if (!user?.id) {
-					throw new UnauthorizedException('User not authenticated');
-				}
-				//lay ds permission cua user
-				//tao 1 ham trong permission query thong qua role_user
-				//hoac lay role truoc roi moi lay permission
-				const hasPermission = await this.permissionsRepository.hasPermission(
-					user.id,
-					[permission],
-				);
-				console.log('Has permission:', hasPermission);
-				if (hasPermission) return next();
-				throw new ForbiddenException();
-			} catch (error) {
-				next(error);
-			}
-		};
-	}
-
-	// auth.middleware.ts
 
 	verifySystemPermission(permission: string) {
 		return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
