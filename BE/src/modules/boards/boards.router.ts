@@ -21,6 +21,9 @@ import {
 import { ListsController } from '../lists/list.controller';
 import { validateRequestMiddleware } from '@/common/middlewares/validationRequest.middleware';
 import { ListPermissionEnum } from '@/common/enums/permissions';
+import { UpdateRoleMemberBoardRequestSchema } from './dtos/requests/updateRoleMember.request';
+
+import z from 'zod';
 
 const boardsController = new BoardsController();
 const listsController = new ListsController();
@@ -72,6 +75,47 @@ router.delete(
 );
 
 boardsRegistry.registerPath({
+	method: 'patch',
+	path: '/boards/{boardId}/members',
+	tags: ['Boards'],
+	request: UpdateRoleMemberBoardRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+
+router.patch(
+	'/:boardId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_MEMBER_ROLE),
+	boardsController.changeRoleOfMemberBoard,
+);
+
+boardsRegistry.registerPath({
+	method: 'delete',
+	path: '/boards/{boardId}/members',
+	tags: ['Boards'],
+	request: {
+		params: z.object({
+			boardId: z.string(),
+		}),
+		body: {
+			description: 'Remove a member from board',
+			content: {
+				'application/json': {
+					schema: z.object({ userId: z.string() }),
+				},
+			},
+		},
+	},
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.delete(
+	'/:boardId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.REMOVE_MEMBER),
+	boardsController.removeMember,
+);
+
+boardsRegistry.registerPath({
 	method: 'get',
 	path: '/boards/{boardId}/lists',
 	tags: ['Boards'],
@@ -100,10 +144,9 @@ boardsRegistry.registerPath({
 
 router.post(
 	'/:boardId/lists',
-
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(ListPermissionEnum.CREATE_LIST),
-
 	listsController.createList,
 );
+
 export const boardsRouter = router;

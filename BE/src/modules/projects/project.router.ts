@@ -21,9 +21,10 @@ import {
 	UpdateInformationRequestSchema,
 	UpdateInformationRequestValidationSchema,
 } from './dtos/requests/updateInformation.request';
+import { UpdateRoleMemberProjectRequestSchema } from './dtos/requests';
 import { boardResponseDtoSchema, CreateBoardRequestSchema } from '../boards/dtos';
 import { BoardsController } from '../boards/boards.controller';
-
+import z from 'zod';
 const projectsController = new ProjectsController();
 const boardsController = new BoardsController();
 export const projectsRegistry = new OpenAPIRegistry();
@@ -106,6 +107,47 @@ router.delete(
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.DELETE_PROJECT),
 	projectsController.archiveProject,
+);
+
+projectsRegistry.registerPath({
+	method: 'patch',
+	path: '/projects/{projectId}/members',
+	tags: ['Projects'],
+	request: UpdateRoleMemberProjectRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+
+router.patch(
+	'/:projectId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.UPDATE_MEMBER_ROLE),
+	projectsController.changeRoleMemberProject,
+);
+
+projectsRegistry.registerPath({
+	method: 'delete',
+	path: '/projects/{projectId}/members',
+	tags: ['Projects'],
+	request: {
+		params: z.object({
+			projectId: z.string(),
+		}),
+		body: {
+			description: 'Remove a member from project',
+			content: {
+				'application/json': {
+					schema: z.object({ userId: z.string() }),
+				},
+			},
+		},
+	},
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.delete(
+	'/:projectId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.REMOVE_MEMBER),
+	projectsController.removeMember,
 );
 
 projectsRegistry.registerPath({

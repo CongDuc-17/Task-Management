@@ -64,4 +64,9 @@ export class BoardMembersRepository {
 			data: { roleId: newRoleId },
 		});
 	}
+	async removeMember(boardId: string, userId: string) {
+		return this.prisma.boardMembers.deleteMany({
+			where: { boardId, userId },
+		});
+	}
 }

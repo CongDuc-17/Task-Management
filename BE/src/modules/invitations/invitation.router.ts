@@ -6,7 +6,8 @@ import { autoBindUtil, validateRequestMiddleware } from '@/common';
 import authMiddleware from '@/common/middlewares/auth.middleware';
 import {
 	CreateInvitationRequestSchema,
-	CreateInvitationRequestValidationSchema,
+	CreateInvitationRequestValidationSchemaProject,
+	CreateInvitationRequestValidationSchemaBoard,
 } from './dtos/requests/createInvitation.request';
 import express from 'express';
 
@@ -33,14 +34,14 @@ invitationsRegistry.registerPath({
 	method: 'post',
 	path: '/invitations/projects/{projectId}',
 	tags: ['Invitations'],
-	request: CreateInvitationRequestSchema,
+	request: CreateInvitationRequestSchema('project'),
 	responses: createApiResponse(InvitationsResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/projects/:projectId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.INVITE_MEMBER),
-	validateRequestMiddleware(CreateInvitationRequestValidationSchema),
+	validateRequestMiddleware(CreateInvitationRequestValidationSchemaProject),
 	invitationController.inviteUserToProject,
 );
 
@@ -49,14 +50,14 @@ invitationsRegistry.registerPath({
 	method: 'post',
 	path: '/invitations/boards/{boardId}',
 	tags: ['Invitations'],
-	request: CreateInvitationRequestSchema,
+	request: CreateInvitationRequestSchema('board'),
 	responses: createApiResponse(InvitationsResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/boards/:boardId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.INVITE_MEMBER),
-	validateRequestMiddleware(CreateInvitationRequestValidationSchema),
+	validateRequestMiddleware(CreateInvitationRequestValidationSchemaBoard),
 	invitationController.inviteUserToBoard,
 );
 

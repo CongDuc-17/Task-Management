@@ -1,3 +1,4 @@
+import { projectMembers } from './../../models/modelSchema/projectMembersSchema';
 import { Prisma, ProjectStatusEnum, UserStatusEnum } from '@prisma/client';
 
 import { PrismaService } from '../database';
@@ -19,6 +20,27 @@ export class ProjectsRepository {
 	async getProjectById(projectId: string): Promise<projects | null> {
 		return this.prismaService.projects.findUnique({
 			where: { id: projectId },
+			include: {
+				_count: { select: { members: true } },
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								avatar: true,
+							},
+						},
+						role: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 

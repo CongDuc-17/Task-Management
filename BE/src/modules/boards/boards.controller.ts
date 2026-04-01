@@ -7,6 +7,7 @@ import {
 } from './dtos';
 import { Exception } from '@tsed/exceptions';
 import { HttpResponseDto } from '@/common/dtos/httpResponse.dto';
+import { boardMembers } from '@/models/modelSchema/boardMembersSchema';
 
 export class BoardsController {
 	constructor(private boardsService: BoardsService = new BoardsService()) {}
@@ -61,6 +62,31 @@ export class BoardsController {
 		const boardId = req.params.boardId as string;
 		const userId = (req.user as { id: string }).id;
 		const result = await this.boardsService.archiveBoard(boardId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
+	async changeRoleOfMemberBoard(req: Request): Promise<Response> {
+		const boardId = req.params.boardId as string;
+		const { userId, roleId } = req.body;
+
+		const result = await this.boardsService.changeRoleOfMemberBoard(
+			boardId,
+			userId,
+			roleId,
+		);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
+	async removeMember(req: Request): Promise<Response> {
+		const boardId = req.params.boardId as string;
+		const { userId } = req.body;
+		const result = await this.boardsService.removeMember(boardId, userId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}

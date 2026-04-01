@@ -6,8 +6,13 @@ export class ProjectMembersRepository {
 	async getProjectsOfUser(userId: string) {
 		return this.prisma.projectMembers.findMany({
 			where: { userId },
-			select: {
-				roleId: true,
+			include: {
+				role: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
 				project: {
 					select: {
 						id: true,
