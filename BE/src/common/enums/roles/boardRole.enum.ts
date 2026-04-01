@@ -1,0 +1,5 @@
+export enum BoardRoleEnum {
+	BOARD_ADMIN = 'BOARD_ADMIN',
+	BOARD_MEMBER = 'BOARD_MEMBER',
+	BOARD_VIEWER = 'BOARD_VIEWER',
+}
