@@ -5,6 +5,7 @@ import { usersRegistry, usersRouter } from './users/users.router';
 import { boardsRegistry, boardsRouter } from './boards/boards.router';
 import { listsRegistry, listsRouter } from './lists/list.router';
 import { cardsRegistry, cardsRouter } from './cards/card.router';
+import { invitationsRegistry, invitationsRouter } from './invitations/invitation.router';
 export const Registries = [
 	healthCheckRegistry,
 	authRegistry,
@@ -13,6 +14,7 @@ export const Registries = [
 	boardsRegistry,
 	listsRegistry,
 	cardsRegistry,
+	invitationsRegistry,
 ];
 
 export const Modules = {
@@ -23,4 +25,5 @@ export const Modules = {
 	boardsRouter,
 	listsRouter,
 	cardsRouter,
+	invitationsRouter,
 };
