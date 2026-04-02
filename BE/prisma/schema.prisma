@@ -303,6 +303,7 @@ model cards {
 }
 
 model cardMembers {
+  id     String @id @default(uuid())
   cardId String @map("card_id")
   card   cards  @relation(fields: [cardId], references: [id])
   userId String @map("user_id")

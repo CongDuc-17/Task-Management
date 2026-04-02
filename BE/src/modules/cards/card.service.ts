@@ -1,5 +1,3 @@
-import { cardLabels } from './../../models/modelSchema/cardLabelsSchema';
-import { boardMembers } from './../../models/modelSchema/boardMembersSchema';
 import { ListsRepository } from './../lists/list.repository';
 import { Exception } from '@tsed/exceptions';
 
@@ -13,12 +11,12 @@ import { NotFoundException } from '@/common';
 import { LabelsRepository } from '../labels/labels.repository';
 import { CardMembersRepository } from '../cardMembers/cardMembers.repository';
 import { CardLabelsRepository } from '../cardLabels/cardLabels.repository';
+import { CardBasicResponseDto, CardWithIncludesResponseDto } from './dtos';
 
 export class CardsService {
 	constructor(
 		private readonly cardsRepository: CardsRepository = new CardsRepository(),
 		private readonly listsRepository: ListsRepository = new ListsRepository(),
-		private readonly boardsRepository: BoardsRepository = new BoardsRepository(),
 		private readonly boardMembersRepository: BoardMembersRepository = new BoardMembersRepository(),
 		private readonly labelsRepository: LabelsRepository = new LabelsRepository(),
 		private readonly cardMembersRepository: CardMembersRepository = new CardMembersRepository(),
@@ -43,15 +41,98 @@ export class CardsService {
 
 	async getCardById(
 		cardId: string,
+		include?: {
+			members?: boolean;
+			labels?: boolean;
+			checklists?: boolean;
+			comments?: boolean;
+		},
 	): Promise<HttpResponseBodySuccessDto<any> | Exception> {
-		const card = await this.cardsRepository.getCardById(cardId);
+		const card = include
+			? await this.cardsRepository.getCardWithIncludes(cardId, include)
+			: await this.cardsRepository.getCardWithCounts(cardId);
+
 		if (!card) {
 			throw new Exception(404, 'Card not found');
 		}
+
+		// Transform to DTO
+		const dto = include
+			? this.mapToCardWithIncludes(card, include)
+			: this.mapToCardBasic(card);
+
 		return {
 			success: true,
-			data: card,
+			data: dto,
 		};
+	}
+
+	// Helper methods:
+	private mapToCardBasic(card: any): CardBasicResponseDto {
+		return {
+			id: card.id,
+			title: card.title,
+			description: card.description,
+			dueDate: card.dueDate,
+			position: card.position,
+			listId: card.listId,
+			memberCount: card._count?.cardMembers ?? 0,
+			labelCount: card._count?.cardLabels ?? 0,
+			checklistCount: card._count?.checklists ?? 0,
+			commentCount: card._count?.comments ?? 0,
+			_links: {
+				members: `/cards/${card.id}/members`,
+				labels: `/cards/${card.id}/labels`,
+				checklists: `/cards/${card.id}/checklists`,
+				comments: `/cards/${card.id}/comments`,
+			},
+			createdAt: card.createdAt,
+		};
+	}
+
+	private mapToCardWithIncludes(card: any, include: any): CardWithIncludesResponseDto {
+		const basic = this.mapToCardBasic(card);
+
+		return {
+			// Lấy tất cả từ basic
+			id: basic.id,
+			title: basic.title,
+			description: basic.description,
+			dueDate: basic.dueDate,
+			position: basic.position,
+			listId: basic.listId,
+			memberCount: basic.memberCount,
+			labelCount: basic.labelCount,
+			checklistCount: basic.checklistCount,
+			commentCount: basic.commentCount,
+			_links: basic._links,
+			createdAt: basic.createdAt,
+			// Thêm optional fields
+			members: include.members
+				? card.cardMembers?.map((cm: any) => ({
+						id: cm.id,
+						userId: cm.userId,
+						userName: cm.user.name,
+						userAvatar: cm.user.avatar,
+					}))
+				: undefined,
+			labels: include.labels
+				? card.cardLabels?.map((cl: any) => ({
+						id: cl.id,
+						name: cl.label.name,
+						color: cl.label.color,
+					}))
+				: undefined,
+			checklists: include.checklists
+				? card.checklists?.map((c: any) => ({
+						id: c.id,
+						title: c.title,
+						itemCount: c.checklistItems.length,
+						completedCount: c.checklistItems.filter((ci: any) => ci.completed)
+							.length,
+					}))
+				: undefined,
+		} as CardWithIncludesResponseDto;
 	}
 
 	async createCard(

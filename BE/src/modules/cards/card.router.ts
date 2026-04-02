@@ -1,10 +1,9 @@
-import { cards } from './../../models/modelSchema/cardsSchema';
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import express from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import { CardsController } from './card.controller';
-
+import { ChecklistsController } from '../checklists/checklists.controller';
 import { autoBindUtil, validateRequestMiddleware } from '@/common';
 import authMiddleware from '@/common/middlewares/auth.middleware';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
@@ -14,6 +13,8 @@ import {
 	addRemoveMemberRequestSchema,
 	addRemoveMemberRequestValidationSchema,
 	cardResponseDtoSchema,
+	getCardRequestSchema,
+	getCardRequestValidationSchema,
 	moveCardRequestParams,
 	moveCardRequestSchema,
 	moveCardRequestValidationSchema,
@@ -22,26 +23,33 @@ import {
 } from './dtos';
 
 import { CardPermissionEnum } from '@/common/enums/permissions';
+import {
+	checklistByIdRequestSchema,
+	createChecklistRequestSchema,
+	createChecklistValidationSchema,
+} from '../checklists/dtos/requests';
+import { checklistResponseDtoSchema } from '../checklists/dtos/responses';
 
 const cardsController = new CardsController();
+const checklistsController = new ChecklistsController();
 export const cardsRegistry = new OpenAPIRegistry();
 
 const router = express.Router({ mergeParams: true });
 autoBindUtil(cardsController);
+autoBindUtil(checklistsController);
 
 cardsRegistry.registerPath({
 	method: 'get',
 	path: '/cards/{cardId}',
 	tags: ['Cards'],
-	request: {
-		params: moveCardRequestParams,
-	},
+	request: getCardRequestSchema,
 	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.get(
 	'/:cardId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.GET_CARD),
+	validateRequestMiddleware(getCardRequestValidationSchema),
 	cardsController.getCardById,
 );
 
@@ -60,22 +68,6 @@ router.patch(
 	validateRequestMiddleware(moveCardRequestValidationSchema),
 	cardsController.moveCard,
 );
-
-// cardsRegistry.registerPath({
-// 	method: 'patch',
-// 	path: '/cards/{cardId}/update-information',
-// 	tags: ['Cards'],
-// 	request: updateInformationCardRequestSchema,
-// 	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
-// });
-
-// router.patch(
-// 	'/:cardId/update-information',
-// 	authMiddleware.verifyAccessToken,
-// 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
-// 	//validateRequestMiddleware(updateInformationCardRequestValidationSchema),
-// 	cardsController.updateInformationCard,
-// );
 
 cardsRegistry.registerPath({
 	method: 'delete',
@@ -111,13 +103,13 @@ router.post(
 
 cardsRegistry.registerPath({
 	method: 'delete',
-	path: '/cards/{cardId}/labels',
+	path: '/cards/{cardId}/labels/{labelId}',
 	tags: ['Cards'],
 	request: addRemoveLabelRequestSchema,
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
-	'/:cardId/labels',
+	'/:cardId/labels/{labelId}',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
 	validateRequestMiddleware(addRemoveLabelRequestValidationSchema),
@@ -141,17 +133,32 @@ router.post(
 
 cardsRegistry.registerPath({
 	method: 'delete',
-	path: '/cards/{cardId}/members',
+	path: '/cards/{cardId}/members/{memberId}',
 	tags: ['Cards'],
 	request: addRemoveMemberRequestSchema,
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
-	'/:cardId/members',
+	'/:cardId/members/{memberId}',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UNASSIGN_MEMBER),
 	validateRequestMiddleware(addRemoveMemberRequestValidationSchema),
 	cardsController.removeMemberFromCard,
+);
+
+cardsRegistry.registerPath({
+	method: 'post',
+	path: '/cards/{cardId}/checklists',
+	tags: ['Cards'],
+	request: createChecklistRequestSchema,
+	responses: createApiResponse(checklistResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.post(
+	'/:cardId/checklists',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
+	validateRequestMiddleware(createChecklistValidationSchema),
+	checklistsController.createChecklist,
 );
 
 export const cardsRouter = router;

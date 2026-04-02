@@ -8,6 +8,13 @@ import { listsRegistry, listsRouter } from './lists/list.router';
 import { cardsRegistry, cardsRouter } from './cards/card.router';
 import { invitationsRegistry, invitationsRouter } from './invitations/invitation.router';
 import { labelsRegistry, labelsRouter } from './labels/labels.router';
+
+import { checklistsRegistry, checklistsRouter } from './checklists/checklists.router';
+
+import {
+	checklistItemsRegistry,
+	checklistItemsRouter,
+} from './checklistItems/checklistItems.router';
 export const Registries = [
 	healthCheckRegistry,
 	authRegistry,
@@ -17,6 +24,8 @@ export const Registries = [
 	listsRegistry,
 	cardsRegistry,
 	labelsRegistry,
+	checklistsRegistry,
+	checklistItemsRegistry,
 	invitationsRegistry,
 ];
 
@@ -29,5 +38,7 @@ export const Modules = {
 	listsRouter,
 	cardsRouter,
 	labelsRouter,
+	checklistsRouter,
+	checklistItemsRouter,
 	invitationsRouter,
 };

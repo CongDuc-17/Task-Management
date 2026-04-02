@@ -14,8 +14,8 @@ const addRemoveMemberRequestBody = z
 	.strict();
 
 export const addRemoveMemberRequestValidationSchema: ZodValidationSchema = {
-	body: addRemoveMemberRequestBody,
 	params: addRemoveMemberRequestParams,
+	body: addRemoveMemberRequestBody,
 };
 
 export const addRemoveMemberRequestSchema = {

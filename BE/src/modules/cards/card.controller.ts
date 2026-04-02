@@ -20,12 +20,25 @@ export class CardsController {
 
 	async getCardById(req: Request): Promise<Response> {
 		const { cardId } = req.params as { cardId: string };
-		const result = await this.cardsService.getCardById(cardId);
+
+		// Parse query include
+		const includeParam = (req.query.include as string) || '';
+		const include = includeParam
+			? {
+					members: includeParam.includes('members'),
+					labels: includeParam.includes('labels'),
+					checklists: includeParam.includes('checklists'),
+					comments: includeParam.includes('comments'),
+				}
+			: undefined;
+
+		const result = await this.cardsService.getCardById(cardId, include);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
 		return new HttpResponseDto().success<any>(result);
 	}
+
 	async createCard(req: Request): Promise<Response> {
 		try {
 			const { listId } = req.params as { listId: string };
@@ -115,8 +128,8 @@ export class CardsController {
 	}
 
 	async removeLabelFromCard(req: Request): Promise<Response> {
-		const { cardId } = req.params as { cardId: string };
-		const { labelId } = req.body;
+		const { cardId, labelId } = req.params as { cardId: string; labelId: string };
+
 		const result = await this.cardsService.removeLabelFromCard(cardId, labelId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
@@ -135,9 +148,9 @@ export class CardsController {
 	}
 
 	async removeMemberFromCard(req: Request): Promise<Response> {
-		const { cardId } = req.params as { cardId: string };
-		const { userId } = req.body;
-		const result = await this.cardsService.removeMemberFromCard(cardId, userId);
+		const { cardId, memberId } = req.params as { cardId: string; memberId: string };
+
+		const result = await this.cardsService.removeMemberFromCard(cardId, memberId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}

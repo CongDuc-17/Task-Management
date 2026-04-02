@@ -47,6 +47,87 @@ export class CardsRepository {
 		});
 	}
 
+	async getCardWithCounts(cardId: string) {
+		const card = await this.prismaService.cards.findUnique({
+			where: { id: cardId },
+			select: {
+				id: true,
+				title: true,
+				description: true,
+				dueDate: true,
+				position: true,
+				listId: true,
+				createdAt: true,
+				_count: {
+					select: {
+						cardMembers: true,
+						cardLabels: true,
+						checklists: true,
+						// comments: true  // nếu có comments table
+					},
+				},
+			},
+		});
+
+		return card;
+	}
+
+	async getCardWithIncludes(
+		cardId: string,
+		include: {
+			members?: boolean;
+			labels?: boolean;
+			checklists?: boolean;
+			comments?: boolean;
+		},
+	) {
+		const selectOptions: any = {
+			id: true,
+			title: true,
+			description: true,
+			dueDate: true,
+			position: true,
+			listId: true,
+			createdAt: true,
+		};
+
+		if (include.members) {
+			selectOptions.cardMembers = {
+				select: {
+					id: true,
+					userId: true,
+					user: { select: { id: true, name: true, avatar: true } },
+				},
+			};
+		}
+
+		if (include.labels) {
+			selectOptions.cardLabels = {
+				select: {
+					id: true,
+					label: { select: { id: true, name: true, color: true } },
+				},
+			};
+		}
+
+		if (include.checklists) {
+			selectOptions.checklists = {
+				select: {
+					id: true,
+					title: true,
+					checklistItems: {
+						select: { id: true, completed: true },
+					},
+				},
+			};
+		}
+
+		return this.prismaService.cards.findUnique({
+			where: { id: cardId },
+			select: selectOptions,
+		});
+	}
+
 	async getCardInList(cardId: string, listId: string) {
 		return this.prismaService.cards.findFirst({
 			where: {
