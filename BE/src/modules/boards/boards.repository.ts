@@ -50,6 +50,12 @@ export class BoardsRepository {
 						},
 					},
 				},
+				lists: {
+					where: { deletedAt: null },
+					include: {
+						_count: { select: { cards: true } },
+					},
+				},
 			},
 		});
 	}

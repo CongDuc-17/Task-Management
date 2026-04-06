@@ -40,6 +40,14 @@ export class ProjectsRepository {
 						},
 					},
 				},
+				boards: {
+					select: {
+						id: true,
+						name: true,
+						description: true,
+						status: true,
+					},
+				},
 			},
 		});
 	}

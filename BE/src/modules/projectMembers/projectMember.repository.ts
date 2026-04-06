@@ -18,6 +18,33 @@ export class ProjectMembersRepository {
 						id: true,
 						name: true,
 						description: true,
+						boards: {
+							select: {
+								id: true,
+								name: true,
+								description: true,
+								status: true,
+							},
+						},
+						members: {
+							include: {
+								user: {
+									select: {
+										id: true,
+										name: true,
+										email: true,
+										avatar: true,
+									},
+								},
+								role: {
+									select: {
+										id: true,
+										name: true,
+									},
+								},
+							},
+						},
+						_count: { select: { members: true } },
 					},
 				},
 			},

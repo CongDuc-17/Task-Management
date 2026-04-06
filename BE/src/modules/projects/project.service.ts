@@ -77,6 +77,7 @@ export class ProjectsService {
 	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto[]>> {
 		const userProjects =
 			await this.projectMembersRepository.getProjectsOfUser(userId);
+
 		const projects = userProjects.map(
 			(up) =>
 				new ProjectResponseDto({

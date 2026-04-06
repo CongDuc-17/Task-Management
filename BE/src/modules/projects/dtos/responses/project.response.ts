@@ -1,5 +1,26 @@
 import { z } from 'zod';
 
+export class BoardDto {
+	id: string;
+	name: string;
+	description?: string;
+	status: string;
+
+	constructor(data: any) {
+		this.id = data.id;
+		this.name = data.name;
+		this.description = data.description;
+		this.status = data.status;
+	}
+}
+
+const boardDtoSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+	status: z.string(),
+});
+
 export class ProjectMemberDto {
 	id: string;
 	user: {
@@ -52,6 +73,7 @@ export class ProjectResponseDto {
 	role?: string;
 	memberCount: number;
 	members?: ProjectMemberDto[];
+	boards?: BoardDto[];
 
 	constructor(data: {
 		id: string;
@@ -60,6 +82,7 @@ export class ProjectResponseDto {
 		role?: string;
 		_count?: { members: number };
 		members?: any[];
+		boards?: any[];
 	}) {
 		this.id = data.id;
 		this.name = data.name;
@@ -67,6 +90,7 @@ export class ProjectResponseDto {
 		this.role = data.role;
 		this.memberCount = data._count?.members ?? 0;
 		this.members = data.members?.map((member) => new ProjectMemberDto(member));
+		this.boards = data.boards?.map((board) => new BoardDto(board));
 	}
 }
 
@@ -77,4 +101,5 @@ export const projectResponseDtoSchema = z.object({
 	role: z.string().optional(),
 	memberCount: z.number(),
 	members: projectMemberDtoSchema.array().optional(),
+	boards: boardDtoSchema.array().optional(),
 });
