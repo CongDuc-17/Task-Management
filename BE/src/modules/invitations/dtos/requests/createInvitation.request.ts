@@ -30,13 +30,19 @@ const getBoardByIdRequestParams = z
 		boardId: z.string().uuid(),
 	})
 	.strict();
-export const CreateInvitationRequestValidationSchema: ZodValidationSchema = {
-	params: getProjectByIdRequestParams || getBoardByIdRequestParams,
+
+export const CreateInvitationRequestValidationSchemaProject: ZodValidationSchema = {
+	params: getProjectByIdRequestParams,
 	body: CreateInvitationBodyRequestSchema,
 };
 
-export const CreateInvitationRequestSchema = {
-	params: getProjectByIdRequestParams || getBoardByIdRequestParams,
+export const CreateInvitationRequestValidationSchemaBoard: ZodValidationSchema = {
+	params: getBoardByIdRequestParams,
+	body: CreateInvitationBodyRequestSchema,
+};
+
+export const CreateInvitationRequestSchema = (type: 'project' | 'board') => ({
+	params: type === 'project' ? getProjectByIdRequestParams : getBoardByIdRequestParams,
 	body: {
 		description: 'Create Invitation Body',
 		content: {
@@ -45,4 +51,4 @@ export const CreateInvitationRequestSchema = {
 			},
 		},
 	},
-};
+});

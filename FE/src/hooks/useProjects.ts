@@ -3,9 +3,6 @@ import { useProjectsStore } from "@/stores/projects.store";
 import { useEffect } from "react";
 
 export const useProjects = () => {
-  // const [projects, setProjects] = useState([]);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState(null);
   const { projects, setProjects, loading, setLoading, error, setError } =
     useProjectsStore();
 
@@ -38,10 +35,27 @@ export const useProjects = () => {
     }
   }
 
+  // Helper function to get boards for a specific project from store
+  const getProjectBoards = (projectId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    return project?.boards || [];
+  };
+
+  const getProjectById = (projectId: string) => {
+    return projects.find((p) => p.id === projectId);
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchProjects();
   }, []);
 
-  return { projects, loading, error, createProject };
+  return {
+    projects,
+    loading,
+    error,
+    createProject,
+    getProjectBoards,
+    getProjectById,
+  };
 };

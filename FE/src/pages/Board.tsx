@@ -23,44 +23,43 @@ import { CreateList } from "@/components/lists/CreateList";
 import { CreateCard } from "@/components/cards/CreateCard";
 import { HeaderBoard } from "@/components/boards/HeaderBoard";
 import { useBoards } from "@/hooks/useBoards";
+import { axiosClient } from "@/lib/apiClient";
 type List = {
   id: string;
   name: string;
   position: number;
 };
 
-type Task = {
+type Card = {
   id: string;
   title: string;
   description?: string;
-  columnId: string;
-};
-
-type Column = {
-  id: string;
-  name: string;
+  listId: string;
+  position: number;
 };
 
 export function Board() {
   const boardId = useParams().boardId as string;
   const { board } = useBoards();
-  console.log("Board data:", board); // Thêm log để kiểm tra dữ liệu board
+
   const { lists, createList, loading: listsLoading } = useLists(boardId);
   const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
   const { cards, createCard } = useCards(listIds);
+
   const [columnOrder, setColumnOrder] = useState<string[] | null>(null);
-  const baseColumns = useMemo<Column[]>(
+  const baseColumns = useMemo<List[]>(
     () =>
       [...lists]
         .sort((a: List, b: List) => a.position - b.position)
         .map((list: List) => ({
           id: list.id,
           name: list.name,
+          position: list.position,
         })),
     [lists],
   );
 
-  const columns = useMemo<Column[]>(() => {
+  const columns = useMemo<List[]>(() => {
     if (!columnOrder) {
       return baseColumns;
     }
@@ -70,7 +69,7 @@ export function Board() {
     );
     const orderedColumns = columnOrder
       .map((columnId) => columnsMap.get(columnId))
-      .filter((column): column is Column => Boolean(column));
+      .filter((column): column is List => Boolean(column));
 
     const missingColumns = baseColumns.filter(
       (column) => !columnOrder.includes(column.id),
@@ -82,17 +81,18 @@ export function Board() {
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
-  const defaultTasks = useMemo<Task[]>(
+  const defaultTasks = useMemo<Card[]>(
     () =>
       cards.map((card) => ({
         id: card.id,
         title: card.title,
-        columnId: card.listId,
+        listId: card.listId,
+        position: card.position,
       })),
     [cards],
   );
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Card[]>([]);
   const tasksToRender = tasks.length ? tasks : defaultTasks;
 
   /**
@@ -121,7 +121,7 @@ export function Board() {
     }
   }
 
-  function handleColumnDrop(e: React.DragEvent, targetColumnId: string) {
+  async function handleColumnDrop(e: React.DragEvent, targetColumnId: string) {
     // Chỉ xử lý nếu đang kéo column
     if (!e.dataTransfer.types.includes("application/x-kanban-column")) {
       return;
@@ -135,33 +135,46 @@ export function Board() {
       return;
     }
 
-    setColumnOrder((prevColumnOrder) => {
-      const sourceColumns =
-        prevColumnOrder?.length === columns.length
-          ? prevColumnOrder
-              .map((columnId) =>
-                columns.find((column) => column.id === columnId),
-              )
-              .filter((column): column is Column => Boolean(column))
-          : columns;
+    const sourceColumns =
+      columnOrder?.length === columns.length
+        ? columnOrder
+            .map((columnId) => columns.find((column) => column.id === columnId))
+            .filter((column): column is List => Boolean(column))
+        : columns;
 
-      const newColumns = [...sourceColumns];
-      const draggedIndex = newColumns.findIndex(
-        (col) => col.id === draggedColumnId,
+    const newColumns = [...sourceColumns];
+    const draggedIndex = newColumns.findIndex(
+      (col) => col.id === draggedColumnId,
+    );
+    const targetIndex = newColumns.findIndex(
+      (col) => col.id === targetColumnId,
+    );
+
+    if (draggedIndex < 0 || targetIndex < 0) {
+      return columnOrder;
+    }
+
+    const [draggedColumn] = newColumns.splice(draggedIndex, 1);
+    newColumns.splice(targetIndex, 0, draggedColumn);
+
+    const beforeListId = newColumns[targetIndex - 1]?.id;
+    const afterListId = newColumns[targetIndex + 1]?.id;
+
+    //goi api
+    try {
+      const response = await axiosClient.patch(
+        `/lists/${draggedColumn.id}/move`,
+        {
+          beforeListId,
+          afterListId,
+        },
       );
-      const targetIndex = newColumns.findIndex(
-        (col) => col.id === targetColumnId,
-      );
-
-      if (draggedIndex < 0 || targetIndex < 0) {
-        return prevColumnOrder;
-      }
-
-      const [draggedColumn] = newColumns.splice(draggedIndex, 1);
-      newColumns.splice(targetIndex, 0, draggedColumn);
-
-      return newColumns.map((column) => column.id);
-    });
+      setColumnOrder(newColumns.map((column) => column.id));
+      console.log("Update column position response:", response);
+    } catch (error) {
+      setColumnOrder(sourceColumns.map((column) => column.id));
+      console.error("Error updating column position:", error);
+    }
 
     setDraggedColumnId(null);
     setDragOverColumnId(null);
@@ -175,25 +188,36 @@ export function Board() {
   /**
    * XỬ LÝ KÉO THẢ CARD
    */
+  // Khi thả vào cột hoặc vùng trống (không phải thả vào card cụ thể)
   function handleDropOverColumn(columnId: string, data: string) {
     try {
-      const taskData = JSON.parse(data) as Task;
-
-      if (taskData.columnId === columnId) {
+      console.log("Drop over column:", columnId, "with data:", data);
+      const taskData = JSON.parse(data) as Card;
+      console.log("Parsed task data:", taskData);
+      if (taskData.listId === columnId) {
         return;
       }
 
-      setTasks((prevTasks) =>
-        (prevTasks.length ? prevTasks : defaultTasks).map((task) =>
-          task.id === taskData.id ? { ...task, columnId } : task,
-        ),
+      const sourceTasks = (tasks.length ? tasks : defaultTasks).map((task) =>
+        task.id === taskData.id ? { ...task, listId: columnId } : task,
       );
+      setTasks(sourceTasks);
+      try {
+        const response = axiosClient.patch(`/cards/${taskData.id}/move`, {
+          targetListId: columnId,
+        });
+        console.log("Update card position response:", response);
+      } catch (error) {
+        setTasks(tasks);
+        console.error("Error updating card position:", error);
+      }
     } catch (error) {
       console.error("Error parsing task data:", error);
     }
   }
 
-  function handleDropOverListItem(
+  // Khi thả vào một card cụ thể, cần biết thả ở trên hay dưới card đó để tính toán vị trí mới
+  async function handleDropOverListItem(
     targetCardId: string,
     data: string,
     direction: KanbanBoardDropDirection,
@@ -203,42 +227,56 @@ export function Board() {
     }
 
     try {
+      console.log(
+        `Drop over card: ${targetCardId} with data:`,
+        data,
+        `and direction: ${direction}`,
+      );
       //const draggedTask = JSON.parse(data) as Task;
       const draggedTask = JSON.parse(data);
       if (draggedTask.id === targetCardId) {
         return;
       }
 
-      setTasks((prevTasks) => {
-        const currentTasks = prevTasks.length ? prevTasks : defaultTasks;
-        const targetTask = currentTasks.find(
-          (task) => task.id === targetCardId,
-        );
-        if (!targetTask) return prevTasks;
+      const currentTasks = tasks.length ? tasks : defaultTasks;
+      const targetTask = currentTasks.find((task) => task.id === targetCardId);
+      if (!targetTask) return;
 
-        const tasksWithoutDragged = currentTasks.filter(
-          (task) => task.id !== draggedTask.id,
-        );
+      const tasksWithoutDragged = currentTasks.filter(
+        (task) => task.id !== draggedTask.id,
+      );
 
-        const updatedDraggedTask = {
-          ...draggedTask,
-          columnId: targetTask.columnId,
-        };
+      const targetIndex = tasksWithoutDragged.findIndex(
+        (task) => task.id === targetCardId,
+      );
 
-        const targetIndex = tasksWithoutDragged.findIndex(
-          (task) => task.id === targetCardId,
-        );
+      const insertIndex = direction === "top" ? targetIndex : targetIndex + 1;
 
-        const insertIndex = direction === "top" ? targetIndex : targetIndex + 1;
+      const newTasks = [
+        ...tasksWithoutDragged.slice(0, insertIndex),
+        { ...draggedTask, listId: targetTask.listId },
+        ...tasksWithoutDragged.slice(insertIndex),
+      ];
 
-        const newTasks = [
-          ...tasksWithoutDragged.slice(0, insertIndex),
-          updatedDraggedTask,
-          ...tasksWithoutDragged.slice(insertIndex),
-        ];
+      const targetListId = targetTask.listId;
+      const beforeCardId = newTasks[insertIndex - 1]?.id;
+      const afterCardId = newTasks[insertIndex + 1]?.id;
 
-        return newTasks;
-      });
+      const oldTasks = tasks;
+      setTasks(newTasks);
+      try {
+        await axiosClient.patch(`/cards/${draggedTask.id}/move`, {
+          targetListId,
+          beforeCardId,
+          afterCardId,
+        });
+        console.log("Update card position response:");
+      } catch (error) {
+        setTasks(oldTasks);
+        console.error("Error updating card position:", error);
+      }
+
+      return newTasks;
     } catch (error) {
       console.error("Error parsing task data:", error);
     }
@@ -250,7 +288,7 @@ export function Board() {
       <SidebarInset className="overflow-x-hidden relative">
         <HeaderBoard boardId={boardId} boardName={board?.name} />
         <KanbanBoardProvider>
-          <div className="h-screen p-4 pt-20">
+          <div className="h-screen p-4">
             <KanbanBoard>
               {columns.map((column) => (
                 <div
@@ -291,7 +329,7 @@ export function Board() {
                     {/* Danh sách cards */}
                     <KanbanBoardColumnList>
                       {tasksToRender
-                        .filter((task) => task.columnId === column.id)
+                        .filter((task) => task.listId === column.id)
                         .map((task) => (
                           <KanbanBoardColumnListItem
                             key={task.id}

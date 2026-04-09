@@ -222,6 +222,18 @@ class AuthMiddleware extends BaseAutoBindMiddleware {
 				let boardId = req.params.boardId as string;
 				let listId = req.params.listId as string;
 				let cardId = req.params.cardId as string;
+				let checklistId = req.params.checklistId as string;
+
+				if (!cardId && checklistId) {
+					const checklist = await this.prismaService.checklists.findUnique({
+						where: { id: checklistId },
+						select: { cardId: true },
+					});
+					if (checklist) {
+						cardId = checklist.cardId;
+					}
+				}
+
 				if (!listId && cardId) {
 					const card = await this.prismaService.cards.findUnique({
 						where: { id: cardId },
@@ -244,7 +256,7 @@ class AuthMiddleware extends BaseAutoBindMiddleware {
 				}
 
 				if (!boardId) {
-					throw new NotFoundException('Board ID not found');
+					throw new NotFoundException('Board ID not found in verify');
 				}
 
 				const hasPermission = await this.permissionsRepository.checkAnyPermission(

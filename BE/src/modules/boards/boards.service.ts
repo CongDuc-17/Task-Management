@@ -69,12 +69,15 @@ export class BoardsService {
 			userId,
 			boardAdminRole.id,
 		);
+		const boardWithMembers = await this.boardsRepository.getBoardById(board.id);
+		if (!boardWithMembers) {
+			throw new NotFoundException('Board not found');
+		}
 		return {
 			success: true,
 			data: new BoardResponseDto({
-				...board,
-				description: board.description ?? undefined,
-				projectId: board.projectId,
+				...boardWithMembers,
+				description: boardWithMembers.description ?? undefined,
 			}),
 		};
 	}
@@ -112,8 +115,6 @@ export class BoardsService {
 		boardId: string,
 	): Promise<HttpResponseBodySuccessDto<BoardResponseDto>> {
 		const board = await this.boardsRepository.getBoardById(boardId);
-		console.log(board);
-		console.log(boardId);
 		if (!board) {
 			throw new NotFoundException('Board not found');
 		}
@@ -134,10 +135,14 @@ export class BoardsService {
 		if (!board) {
 			throw new NotFoundException('Board not found');
 		}
-		const updatedBoard = await this.boardsRepository.updateBoard(boardId, {
+		await this.boardsRepository.updateBoard(boardId, {
 			name: data.name ?? board.name,
 			description: data.description ?? board.description,
 		});
+		const updatedBoard = await this.boardsRepository.getBoardById(boardId);
+		if (!updatedBoard) {
+			throw new NotFoundException('Board not found');
+		}
 		return {
 			success: true,
 			data: new BoardResponseDto({
@@ -154,6 +159,73 @@ export class BoardsService {
 		}
 
 		await this.boardsRepository.archiveBoard(boardId);
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
+	async changeRoleOfMemberBoard(
+		boardId: string,
+		userId: string,
+		newRoleId: string,
+	): Promise<HttpResponseBodySuccessDto<null>> {
+		const existingBoard = await this.boardsRepository.getBoardById(boardId);
+		if (!existingBoard) {
+			throw new NotFoundException('Board not found');
+		}
+
+		const role = await new RolesRepository().findById(newRoleId);
+
+		if (!role) {
+			throw new NotFoundException('Role not found');
+		}
+		if (role.status === RoleStatusEnum.INACTIVE) {
+			throw new OptionalException(400, 'Role is inactive');
+		}
+		// Check xem role có phù hợp với phạm vi Board không (bắt đầu với BOARD_)
+		if (!role.name.startsWith('BOARD_')) {
+			throw new OptionalException(400, 'Role must be a board role (BOARD_*)');
+		}
+		if (role.name === BoardRoleEnum.BOARD_ADMIN) {
+			throw new OptionalException(400, 'Cannot assign board admin role');
+		}
+
+		const isMember = await this.boardMembersRepository.isUserMemberOfBoard(
+			boardId,
+			userId,
+		);
+		if (!isMember) {
+			throw new Forbidden('You are not a member of this board');
+		}
+
+		await this.boardMembersRepository.changeRoleOfMemberBoard(
+			boardId,
+			userId,
+			newRoleId,
+		);
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
+	async removeMember(
+		boardId: string,
+		userId: string,
+	): Promise<HttpResponseBodySuccessDto<null>> {
+		const existingBoard = await this.boardsRepository.getBoardById(boardId);
+		if (!existingBoard) {
+			throw new NotFoundException('Board not found');
+		}
+		const isMember = await this.boardMembersRepository.isUserMemberOfBoard(
+			boardId,
+			userId,
+		);
+		if (!isMember) {
+			throw new Forbidden('You are not a member of this board');
+		}
+		await this.boardMembersRepository.removeMember(boardId, userId);
 		return {
 			success: true,
 			data: null,

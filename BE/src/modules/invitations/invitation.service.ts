@@ -148,6 +148,17 @@ export class InvitationService {
 		email: string,
 		roleId: string,
 	): Promise<HttpResponseBodySuccessDto<InvitationResponseDto> | Exception> {
+		const board = await this.boardsRepository.getBoardById(boardId);
+		if (!board) {
+			throw new NotFoundException('Board not found');
+		}
+		const role = await this.rolesRepository.findById(roleId);
+		if (!role) {
+			throw new NotFoundException('Role not found');
+		}
+		if (!role.name.startsWith('BOARD_')) {
+			throw new ConflictException('Role is not a board role');
+		}
 		const existingUser = await this.usersRepository.findUser({ email });
 
 		if (existingUser) {

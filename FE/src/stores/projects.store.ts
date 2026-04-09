@@ -25,6 +25,8 @@ interface ProjectsStore {
 
   createBoardToProject: (projectId: string, board: Board) => void;
 
+  updateMembersCount: (projectId: string, count: number) => void;
+
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null | string) => void;
 }
@@ -45,6 +47,7 @@ export const useProjectsStore = create<ProjectsStore>((set) => ({
     set((state) => ({
       projects: state.projects.filter((p) => p.id !== projectId),
     })),
+
   createBoardToProject: (projectId, board) =>
     set((state) => ({
       projects: state.projects.map((p) =>
@@ -53,6 +56,14 @@ export const useProjectsStore = create<ProjectsStore>((set) => ({
           : p,
       ),
     })),
+
+  updateMembersCount: (projectId, count) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, membersCount: count } : p,
+      ),
+    })),
+
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 }));

@@ -3,7 +3,7 @@ import { cleanEnv, host, port, str, testOnly } from 'envalid';
 
 dotenv.config();
 
-export const appEnv = cleanEnv(process.env, {
+const rawEnv = cleanEnv(process.env, {
 	NODE_ENV: str({
 		devDefault: testOnly('test'),
 		choices: ['development', 'production', 'test'],
@@ -12,3 +12,13 @@ export const appEnv = cleanEnv(process.env, {
 	PORT: port({ devDefault: testOnly(3000) }),
 	CORS_ORIGIN: str({ devDefault: testOnly('http://localhost:3000') }),
 });
+
+// Parse CORS_ORIGIN as an array if it contains commas
+const corsOrigin = rawEnv.CORS_ORIGIN.includes(',')
+	? rawEnv.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+	: rawEnv.CORS_ORIGIN;
+
+export const appEnv = {
+	...rawEnv,
+	CORS_ORIGIN: corsOrigin,
+};

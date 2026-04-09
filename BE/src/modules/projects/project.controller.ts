@@ -63,4 +63,29 @@ export class ProjectsController {
 		}
 		return new HttpResponseDto().success<null>(result);
 	}
+
+	async changeRoleMemberProject(req: Request): Promise<Response> {
+		const projectId = req.params.projectId as string;
+
+		const { userId, roleId } = req.body;
+		const result = await this.projectService.changeRoleMemberProject(
+			projectId,
+			userId,
+			roleId,
+		);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
+	async removeMember(req: Request): Promise<Response> {
+		const projectId = req.params.projectId as string;
+		const { userId } = req.body;
+		const result = await this.projectService.removeMember(projectId, userId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
 }

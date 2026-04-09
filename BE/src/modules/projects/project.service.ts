@@ -62,13 +62,7 @@ export class ProjectsService {
 		if (!project) {
 			throw new NotFoundException('Project not found');
 		}
-		// const isMember = await this.projectMembersRepository.isUserMemberOfProject(
-		// 	projectId,
-		// 	userId,
-		// );
-		// if (!isMember) {
-		// 	throw new Forbidden('You are not a member of this project');
-		// }
+
 		return {
 			success: true,
 			data: new ProjectResponseDto({
@@ -83,6 +77,7 @@ export class ProjectsService {
 	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto[]>> {
 		const userProjects =
 			await this.projectMembersRepository.getProjectsOfUser(userId);
+
 		const projects = userProjects.map(
 			(up) =>
 				new ProjectResponseDto({
@@ -91,6 +86,7 @@ export class ProjectsService {
 					role: up.roleId,
 				}),
 		);
+
 		return {
 			success: true,
 			data: projects,
@@ -169,6 +165,75 @@ export class ProjectsService {
 		}
 
 		await this.projectsRepository.archiveProject(projectId);
+
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
+	async changeRoleMemberProject(
+		projectId: string,
+		userId: string,
+		newRoleId: string,
+	): Promise<HttpResponseBodySuccessDto<null>> {
+		const existingProject = await this.projectsRepository.getProjectById(projectId);
+		if (!existingProject) {
+			throw new NotFoundException('Project not found');
+		}
+
+		const role = await this.rolesRepository.findById(newRoleId);
+		if (!role) {
+			throw new NotFoundException('Role not found');
+		}
+		if (role.status === RoleStatusEnum.INACTIVE) {
+			throw new OptionalException(400, 'Role is inactive');
+		}
+		// Check xem role có phù hợp với phạm vi Project không (bắt đầu với PROJECT_)
+		if (!role.name.startsWith('PROJECT_')) {
+			throw new OptionalException(400, 'Role must be a project role (PROJECT_*)');
+		}
+		if (role.name === ProjectRoleEnum.PROJECT_ADMIN) {
+			throw new OptionalException(400, 'Cannot assign project admin role');
+		}
+		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
+			projectId,
+			userId,
+		);
+		if (!isMember) {
+			throw new Forbidden('You are not a member of this project');
+		}
+
+		const changed = await this.projectMembersRepository.changeRoleOfMemberProject(
+			projectId,
+			userId,
+			newRoleId,
+		);
+
+		console.log('Changed role of member project result:', changed);
+		return {
+			success: changed.count > 0,
+			data: null,
+		};
+	}
+
+	async removeMember(
+		projectId: string,
+		userId: string,
+	): Promise<HttpResponseBodySuccessDto<null>> {
+		const existingProject = await this.projectsRepository.getProjectById(projectId);
+		if (!existingProject) {
+			throw new NotFoundException('Project not found');
+		}
+		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
+			projectId,
+			userId,
+		);
+
+		if (!isMember) {
+			throw new Forbidden('You are not a member of this project');
+		}
+		await this.projectMembersRepository.removeMember(projectId, userId);
 
 		return {
 			success: true,

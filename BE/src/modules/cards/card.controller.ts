@@ -18,6 +18,27 @@ export class CardsController {
 		return new HttpResponseDto().success<any[]>(result);
 	}
 
+	async getCardById(req: Request): Promise<Response> {
+		const { cardId } = req.params as { cardId: string };
+
+		// Parse query include
+		const includeParam = (req.query.include as string) || '';
+		const include = includeParam
+			? {
+					members: includeParam.includes('members'),
+					labels: includeParam.includes('labels'),
+					checklists: includeParam.includes('checklists'),
+					comments: includeParam.includes('comments'),
+				}
+			: undefined;
+
+		const result = await this.cardsService.getCardById(cardId, include);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
 	async createCard(req: Request): Promise<Response> {
 		try {
 			const { listId } = req.params as { listId: string };
@@ -60,31 +81,31 @@ export class CardsController {
 		return new HttpResponseDto().success<any>(result);
 	}
 
-	async updateInformationCard(req: Request): Promise<Response> {
-		try {
-			const { cardId } = req.params as { cardId: string };
-			const { title, description, members, dueDate } = req.body;
-			const user = req.user as { id: string };
+	// async updateInformationCard(req: Request): Promise<Response> {
+	// 	try {
+	// 		const { cardId } = req.params as { cardId: string };
+	// 		const { title, description, members, dueDate } = req.body;
+	// 		const user = req.user as { id: string };
 
-			const result = await this.cardsService.updateInformationCard(
-				cardId,
-				user.id,
-				title,
-				description,
-				members,
-				dueDate,
-			);
-			if (result instanceof Exception) {
-				return new HttpResponseDto().exception(result);
-			}
-			return new HttpResponseDto().success<any>(result);
-		} catch (error) {
-			console.error('[CardsController] updateInformationCard error:', error);
-			return new HttpResponseDto().exception(
-				new Exception(500, 'Internal Server Error'),
-			);
-		}
-	}
+	// 		const result = await this.cardsService.updateInformationCard(
+	// 			cardId,
+	// 			user.id,
+	// 			title,
+	// 			description,
+	// 			members,
+	// 			dueDate,
+	// 		);
+	// 		if (result instanceof Exception) {
+	// 			return new HttpResponseDto().exception(result);
+	// 		}
+	// 		return new HttpResponseDto().success<any>(result);
+	// 	} catch (error) {
+	// 		console.error('[CardsController] updateInformationCard error:', error);
+	// 		return new HttpResponseDto().exception(
+	// 			new Exception(500, 'Internal Server Error'),
+	// 		);
+	// 	}
+	// }
 
 	async softDeleteCard(req: Request): Promise<Response> {
 		const { cardId } = req.params as { cardId: string };
@@ -93,6 +114,49 @@ export class CardsController {
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async addLabelToCard(req: Request): Promise<Response> {
+		const { cardId } = req.params as { cardId: string };
+		const { labelId } = req.body;
+		const result = await this.cardsService.addLabelToCard(cardId, labelId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async removeLabelFromCard(req: Request): Promise<Response> {
+		const { cardId, labelId } = req.params as { cardId: string; labelId: string };
+
+		const result = await this.cardsService.removeLabelFromCard(cardId, labelId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async addMemberToCard(req: Request): Promise<Response> {
+		const { cardId } = req.params as { cardId: string };
+		const { userId } = req.body;
+		const result = await this.cardsService.addMemberToCard(cardId, userId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async removeMemberFromCard(req: Request): Promise<Response> {
+		const { cardId, memberId } = req.params as { cardId: string; memberId: string };
+		console.log(
+			`[CardsController] removeMemberFromCard - cardId: ${cardId}, memberId: ${memberId}`,
+		);
+		const result = await this.cardsService.removeMemberFromCard(cardId, memberId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+
 		return new HttpResponseDto().success<any>(result);
 	}
 }
