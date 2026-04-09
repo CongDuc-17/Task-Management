@@ -6,6 +6,7 @@ type Board = {
   id: string;
   name: string;
   description?: string;
+  members?: string[];
 };
 
 export const useBoards = () => {

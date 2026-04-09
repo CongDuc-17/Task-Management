@@ -1,0 +1,144 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useBoards } from "@/hooks/useBoards";
+import { useEffect, useState } from "react";
+
+import { useParams } from "react-router-dom";
+import { apiClient } from "@/lib/apiClient";
+import { X } from "lucide-react";
+export function AddMember({ membersCard }: { membersCard: any[] }) {
+  console.log("Members of card:", membersCard);
+  const cardId = useParams().cardId as string;
+  const { board, fetchBoard } = useBoards();
+  const [cardMembers, setCardMembers] = useState<any[]>(membersCard || []);
+
+  // Lấy list userId đã có trên card
+  const cardMemberIds = cardMembers.map(
+    (member) => member.userId || member.user?.id,
+  );
+  console.log("Card member IDs:", cardMemberIds);
+
+  async function handleAddMemberToCard(memberId: string) {
+    try {
+      const response = await apiClient.post(`/cards/${cardId}/members`, {
+        userId: memberId,
+      });
+
+      // Optimistic update
+      const memberToAdd = board?.members?.find((m) => m.user.id === memberId);
+      if (memberToAdd) {
+        setCardMembers([
+          ...cardMembers,
+          {
+            userId: memberId,
+            userName: memberToAdd.user.name,
+            userAvatar: memberToAdd.user.avatar,
+          },
+        ]);
+      }
+
+      console.log("Added member to card:", response.data);
+    } catch (error) {
+      console.error("Error adding member to card:", error);
+    }
+  }
+
+  async function handleRemoveMemberFromCard(memberId: string) {
+    try {
+      const response = await apiClient.delete(
+        `/cards/${cardId}/members/${memberId}`,
+      );
+
+      // Optimistic update
+      setCardMembers(
+        cardMembers.filter(
+          (member) => (member.userId || member.user?.id) !== memberId,
+        ),
+      );
+
+      console.log("Removed member from card:", response.data);
+    } catch (error) {
+      console.error("Error removing member from card:", error);
+    }
+  }
+
+  useEffect(() => {
+    fetchBoard();
+  }, []);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">Add Member</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="leading-none font-medium">Add Member</h4>
+            <p className="text-sm text-muted-foreground">
+              Set the dimensions for the layer.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label>Search for a member to add</Label>
+            <Input id="member-search" name="member-search" type="text" />
+          </div>
+
+          <div className="flex flex-col gap-2  overflow-y-scroll   max-h-60">
+            <div className="text-sm text-muted-foreground">Member of card</div>
+            {cardMembers?.map((member, index) => (
+              <Button
+                variant={"outline"}
+                className="flex justify-between h-auto items-center hover:bg-white"
+                key={index}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center ">
+                    {member.userAvatar}
+                  </div>
+                  <div>{member.userName}</div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveMemberFromCard(
+                      member.userId || member.user?.id,
+                    );
+                  }}
+                  className="p-1 hover:bg-red-100 rounded"
+                >
+                  <X size={16} />
+                </Button>
+              </Button>
+            ))}
+            <div className="text-sm text-muted-foreground">Member of board</div>
+            {board?.members
+              ?.filter((member) => !cardMemberIds.includes(member.user.id))
+              .map((member, index) => (
+                <Button
+                  variant={"outline"}
+                  className="flex justify-start h-auto items-center "
+                  key={index}
+                  onClick={() => handleAddMemberToCard(member.user.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center ">
+                      {member.user.avatar}
+                    </div>
+                    <div>{member.user.name}</div>
+                  </div>
+                </Button>
+              ))}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

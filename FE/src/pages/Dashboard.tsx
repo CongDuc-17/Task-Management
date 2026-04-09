@@ -12,7 +12,7 @@ import { CreateBoard } from "@/components/boards/CreateBoard";
 export function Dashboard() {
   const { projects, loading, error } = useProjects();
 
-  console.log("Projects in Dashboard:", projects, loading, error);
+  console.log("Projects in Dashboard:", projects);
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -68,7 +68,7 @@ export function Dashboard() {
                   </div>
 
                   <div className="grid grid-cols-4 gap-6 pr-8 pb-8">
-                    {project.boards.map((b) => (
+                    {project.boards?.map((b) => (
                       <Link to={`/boards/${b.id}`} key={b.id}>
                         <Card className="h-36 cursor-pointer hover:shadow-lg transition-shadow relative">
                           <div className="absolute bottom-0 w-full text-center p-2 bg-gray-100 rounded-b-lg font-medium">
@@ -77,7 +77,6 @@ export function Dashboard() {
                         </Card>
                       </Link>
                     ))}
-
                     <CreateBoard projectId={project.id} />
                   </div>
                 </div>

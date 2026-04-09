@@ -126,6 +126,10 @@ export const apiClient = {
     return axiosClient.patch(url, data, config).then((res) => res.data);
   },
 
+  delete(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+    return axiosClient.delete(url, config).then((res) => res.data);
+  },
+
   // delete(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse> {
   //   return axiosClient.delete(url, config).then((res) => res.data);
   // },
