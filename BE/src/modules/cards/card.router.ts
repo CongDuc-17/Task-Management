@@ -10,8 +10,8 @@ import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
 import {
 	addRemoveLabelRequestSchema,
 	addRemoveLabelRequestValidationSchema,
-	addRemoveMemberRequestSchema,
-	addRemoveMemberRequestValidationSchema,
+	addMemberRequestSchema,
+	addMemberRequestValidationSchema,
 	cardResponseDtoSchema,
 	getCardRequestSchema,
 	getCardRequestValidationSchema,
@@ -20,6 +20,8 @@ import {
 	moveCardRequestValidationSchema,
 	updateInformationCardRequestSchema,
 	updateInformationCardRequestValidationSchema,
+	removeMemberRequestValidationSchema,
+	removeMemberRequestSchema,
 } from './dtos';
 
 import { CardPermissionEnum } from '@/common/enums/permissions';
@@ -109,7 +111,7 @@ cardsRegistry.registerPath({
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
-	'/:cardId/labels/{labelId}',
+	'/:cardId/labels/:labelId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
 	validateRequestMiddleware(addRemoveLabelRequestValidationSchema),
@@ -120,14 +122,14 @@ cardsRegistry.registerPath({
 	method: 'post',
 	path: '/cards/{cardId}/members',
 	tags: ['Cards'],
-	request: addRemoveMemberRequestSchema,
+	request: addMemberRequestSchema,
 	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/:cardId/members',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.ASSIGN_MEMBER),
-	validateRequestMiddleware(addRemoveMemberRequestValidationSchema),
+	validateRequestMiddleware(addMemberRequestValidationSchema),
 	cardsController.addMemberToCard,
 );
 
@@ -135,14 +137,14 @@ cardsRegistry.registerPath({
 	method: 'delete',
 	path: '/cards/{cardId}/members/{memberId}',
 	tags: ['Cards'],
-	request: addRemoveMemberRequestSchema,
+	request: removeMemberRequestSchema,
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
-	'/:cardId/members/{memberId}',
+	'/:cardId/members/:memberId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UNASSIGN_MEMBER),
-	validateRequestMiddleware(addRemoveMemberRequestValidationSchema),
+	validateRequestMiddleware(removeMemberRequestValidationSchema),
 	cardsController.removeMemberFromCard,
 );
 

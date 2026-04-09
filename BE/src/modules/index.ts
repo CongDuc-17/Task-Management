@@ -15,6 +15,7 @@ import {
 	checklistItemsRegistry,
 	checklistItemsRouter,
 } from './checklistItems/checklistItems.router';
+import { rolesRegistry, rolesRouter } from './roles/role.router';
 export const Registries = [
 	healthCheckRegistry,
 	authRegistry,
@@ -27,6 +28,7 @@ export const Registries = [
 	checklistsRegistry,
 	checklistItemsRegistry,
 	invitationsRegistry,
+	rolesRegistry,
 ];
 
 export const Modules = {
@@ -41,4 +43,5 @@ export const Modules = {
 	checklistsRouter,
 	checklistItemsRouter,
 	invitationsRouter,
+	rolesRouter,
 };

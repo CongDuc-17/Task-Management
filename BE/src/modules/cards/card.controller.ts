@@ -149,7 +149,9 @@ export class CardsController {
 
 	async removeMemberFromCard(req: Request): Promise<Response> {
 		const { cardId, memberId } = req.params as { cardId: string; memberId: string };
-
+		console.log(
+			`[CardsController] removeMemberFromCard - cardId: ${cardId}, memberId: ${memberId}`,
+		);
 		const result = await this.cardsService.removeMemberFromCard(cardId, memberId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);

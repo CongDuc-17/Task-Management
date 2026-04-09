@@ -381,21 +381,53 @@ export class CardsService {
 		cardId: string,
 		userId: string,
 	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
-		const card = await this.cardsRepository.getCardById(cardId);
-		if (!card) throw new NotFoundException('Card not found');
-		const list = await this.listsRepository.getListById(card.listId);
-		if (!list) throw new NotFoundException('List not found');
-		const isMember = await this.boardMembersRepository.isUserMemberOfBoard(
-			list.boardId,
-			userId,
-		);
-		if (!isMember) {
-			throw new NotFoundException('User is not a member of the board');
+		try {
+			const card = await this.cardsRepository.getCardById(cardId);
+			if (!card) throw new NotFoundException('Card not found');
+			const list = await this.listsRepository.getListById(card.listId);
+			if (!list) throw new NotFoundException('List not found');
+			const isMember = await this.boardMembersRepository.isUserMemberOfBoard(
+				list.boardId,
+				userId,
+			);
+			if (!isMember) {
+				throw new NotFoundException('User is not a member of the board');
+			}
+
+			// Check if member actually exists on card
+			const memberOnCard = await this.cardMembersRepository.findMemberOnCard(
+				cardId,
+				userId,
+			);
+			if (!memberOnCard) {
+				console.warn(
+					`[CardsService] Member ${userId} not found on card ${cardId}`,
+				);
+				throw new NotFoundException('Member is not assigned to this card');
+			}
+
+			const result = await this.cardMembersRepository.removeMemberFromCard(
+				cardId,
+				userId,
+			);
+
+			if (result.count === 0) {
+				console.error(
+					`[CardsService] Failed to remove member ${userId} from card ${cardId}`,
+				);
+				throw new Exception(500, 'Failed to remove member from card');
+			}
+
+			console.log(
+				`[CardsService] Successfully removed member ${userId} from card ${cardId}`,
+			);
+			return {
+				success: true,
+				data: null,
+			};
+		} catch (error) {
+			console.error('[CardsService] removeMemberFromCard error:', error);
+			throw error;
 		}
-		await this.cardMembersRepository.removeMemberFromCard(cardId, userId);
-		return {
-			success: true,
-			data: null,
-		};
 	}
 }

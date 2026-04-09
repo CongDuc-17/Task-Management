@@ -45,6 +45,7 @@ app.use('/labels', Modules.labelsRouter);
 app.use('/checklists', Modules.checklistsRouter);
 app.use('/checklist-items', Modules.checklistItemsRouter);
 app.use('/invitations', Modules.invitationsRouter);
+app.use('/roles', Modules.rolesRouter);
 
 app.use(errorHandlerMiddleware);
 
