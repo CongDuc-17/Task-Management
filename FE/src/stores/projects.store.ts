@@ -3,6 +3,7 @@ interface Project {
   id: string;
   name: string;
   description?: string;
+  members?: Member[];
 
   boards?: Board[];
 }
@@ -11,6 +12,15 @@ interface Board {
   id: string;
   name: string;
   description?: string;
+}
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  role: string;
+  roleId: string;
 }
 
 interface ProjectsStore {

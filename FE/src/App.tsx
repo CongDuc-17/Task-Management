@@ -8,6 +8,7 @@ import { NotFound } from "./pages/NotFound";
 import { Dashboard } from "./pages/Dashboard";
 import { Board } from "./pages/Board";
 import { ProjectDetail } from "./pages/ProjectDetail";
+import { CardDetail } from "./pages/CardDetail";
 
 function App() {
   return (
@@ -15,10 +16,12 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="*" element={<NotFound />} />
       <Route path="/projects/:projectId" element={<ProjectDetail />} />
-
-      <Route path="/boards/:boardId" element={<Board />} />
+      <Route path="/boards/:boardId" element={<Board />}>
+        {/* Nested route cho card detail modal */}
+        <Route path="cards/:cardId" element={<CardDetail />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

@@ -13,13 +13,18 @@ export function ProjectDetail() {
 
   const project = getProjectById(projectId);
   console.log("ProjectDetail - project:", project);
+  console.log("projectMembers:", project?.members);
   const boards = getProjectBoards(projectId);
 
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
       <SidebarInset className="relative">
-        <HeaderProject projectId={projectId} projectName={project?.name} />
+        <HeaderProject
+          projectId={projectId}
+          projectName={project?.name}
+          projectMembers={project?.members}
+        />
         <main className="">
           <div className="grid grid-cols-4 gap-6 p-8">
             {loading && <div>Loading...</div>}

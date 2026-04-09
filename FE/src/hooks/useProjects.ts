@@ -57,5 +57,6 @@ export const useProjects = () => {
     createProject,
     getProjectBoards,
     getProjectById,
+    fetchProjects,
   };
 };

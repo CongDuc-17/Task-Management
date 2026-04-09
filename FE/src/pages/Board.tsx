@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   KanbanBoardProvider,
@@ -24,6 +25,7 @@ import { CreateCard } from "@/components/cards/CreateCard";
 import { HeaderBoard } from "@/components/boards/HeaderBoard";
 import { useBoards } from "@/hooks/useBoards";
 import { axiosClient } from "@/lib/apiClient";
+import { Outlet } from "react-router-dom";
 type List = {
   id: string;
   name: string;
@@ -40,8 +42,8 @@ type Card = {
 
 export function Board() {
   const boardId = useParams().boardId as string;
-  const { board } = useBoards();
-
+  const navigate = useNavigate();
+  const { board, fetchBoard } = useBoards();
   const { lists, createList, loading: listsLoading } = useLists(boardId);
   const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
   const { cards, createCard } = useCards(listIds);
@@ -286,7 +288,12 @@ export function Board() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="overflow-x-hidden relative">
-        <HeaderBoard boardId={boardId} boardName={board?.name} />
+        <HeaderBoard
+          boardId={boardId}
+          boardName={board?.name}
+          boardMembers={board?.members ?? []}
+          fetchBoard={fetchBoard}
+        />
         <KanbanBoardProvider>
           <div className="h-screen p-4">
             <KanbanBoard>
@@ -338,7 +345,13 @@ export function Board() {
                               handleDropOverListItem(task.id, data, direction)
                             }
                           >
-                            <KanbanBoardCard data={task}>
+                            <KanbanBoardCard
+                              data={task}
+                              onClick={() =>
+                                navigate(`/boards/${boardId}/cards/${task.id}`)
+                              }
+                              className="relative"
+                            >
                               <KanbanBoardCardTitle>
                                 {task.title}
                               </KanbanBoardCardTitle>
@@ -371,6 +384,8 @@ export function Board() {
             </KanbanBoard>
           </div>
         </KanbanBoardProvider>
+        {/* Outlet để render nested routes (CardDetail modal) */}
+        <Outlet />
       </SidebarInset>
     </SidebarProvider>
   );
