@@ -1,6 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
@@ -11,9 +20,8 @@ import { useEffect, useState } from "react";
 
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 export function AddMember({ membersCard }: { membersCard: any[] }) {
-  console.log("Members of card:", membersCard);
   const cardId = useParams().cardId as string;
   const { board, fetchBoard } = useBoards();
   const [cardMembers, setCardMembers] = useState<any[]>(membersCard || []);
@@ -22,7 +30,6 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
   const cardMemberIds = cardMembers.map(
     (member) => member.userId || member.user?.id,
   );
-  console.log("Card member IDs:", cardMemberIds);
 
   async function handleAddMemberToCard(memberId: string) {
     try {
@@ -42,8 +49,6 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
           },
         ]);
       }
-
-      console.log("Added member to card:", response.data);
     } catch (error) {
       console.error("Error adding member to card:", error);
     }
@@ -61,8 +66,6 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
           (member) => (member.userId || member.user?.id) !== memberId,
         ),
       );
-
-      console.log("Removed member from card:", response.data);
     } catch (error) {
       console.error("Error removing member from card:", error);
     }
@@ -74,7 +77,12 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline">Add Member</Button>
+        <Avatar>
+          <AvatarImage src="" alt="@shadcn" className="grayscale" />
+          <AvatarFallback>
+            <Plus />
+          </AvatarFallback>
+        </Avatar>
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="grid gap-4">
