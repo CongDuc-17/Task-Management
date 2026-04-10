@@ -16,7 +16,14 @@ import { AddMember } from "@/components/cards/AddMember";
 import { AddLabel } from "@/components/cards/AddLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from "@/components/ui/avatar";
 interface Card {
   id: string;
   title: string;
@@ -37,6 +44,11 @@ export function CardDetail() {
   const [loading, setLoading] = useState(true);
   const [newDescription, setNewDescription] = useState("");
   const [newComments, setComments] = useState("");
+  const [labelsBoard, setLabelsBoard] = useState([]);
+
+  useEffect(() => {
+    fetchLabelsBoard();
+  }, [boardId]);
 
   useEffect(() => {
     const fetchCard = async () => {
@@ -58,6 +70,18 @@ export function CardDetail() {
       fetchCard();
     }
   }, [cardId]);
+
+  async function fetchLabelsBoard() {
+    try {
+      const response = await apiClient.get(`/boards/${boardId}/labels`);
+      console.log("Fetched labels for board:", response.data);
+      setLabelsBoard(response.data);
+    } catch (error) {
+      console.error("Error fetching labels for board:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleClose = () => {
     navigate(`/boards/${boardId}`);
@@ -95,8 +119,27 @@ export function CardDetail() {
                 />
               </div>
               <div className="flex flex-row flex-wrap items-center pr-4 gap-2">
-                <AddMember membersCard={card.members} />
-                <AddLabel />
+                <div>
+                  {card.members?.length > 0 ? (
+                    <AvatarGroup className="grayscale">
+                      {card.members.map((member, index) => (
+                        <Avatar key={index}>
+                          <AvatarImage
+                            src={member.userAvatar}
+                            alt={member.userAvatar}
+                          />
+                          <AvatarFallback>{member.userName}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                      <AvatarGroupCount>
+                        <AddMember membersCard={card.members} />
+                      </AvatarGroupCount>
+                    </AvatarGroup>
+                  ) : (
+                    <AddMember membersCard={card.members} />
+                  )}
+                </div>
+                <AddLabel labelsBoard={labelsBoard} labelsCard={card.labels} />
                 <AddChecklist />
               </div>
             </div>
