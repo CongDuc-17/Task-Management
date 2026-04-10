@@ -24,6 +24,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { useBoards } from "@/hooks/useBoards";
 interface Card {
   id: string;
   title: string;
@@ -44,44 +45,50 @@ export function CardDetail() {
   const [loading, setLoading] = useState(true);
   const [newDescription, setNewDescription] = useState("");
   const [newComments, setComments] = useState("");
-  const [labelsBoard, setLabelsBoard] = useState([]);
+
+  const { labelsBoard, fetchLabelsBoard } = useBoards();
 
   useEffect(() => {
     fetchLabelsBoard();
   }, [boardId]);
 
-  useEffect(() => {
-    const fetchCard = async () => {
-      try {
-        setLoading(true);
-        const response = await apiClient.get(
-          `/cards/${cardId}?include=members,labels,checklists`,
-        );
-        setCard(response.data);
-        console.log("Fetched card:", response.data);
-      } catch (error) {
-        console.error("Error fetching card:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchCard = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get(
+        `/cards/${cardId}?include=members,labels,checklists`,
+      );
+      setCard(response.data);
+      console.log("Fetched card:", response.data);
+    } catch (error) {
+      console.error("Error fetching card:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleUpdateLabels = (action: "add" | "remove", labelObj: any) => {
+    setCard((prevCard) => {
+      if (!prevCard) return prevCard;
+
+      let updatedLabels = prevCard.labels ? [...prevCard.labels] : [];
+
+      if (action === "add") {
+        updatedLabels.push(labelObj);
+      } else if (action === "remove") {
+        // Giả sử mảng labels chứa các object có id
+        updatedLabels = updatedLabels.filter((l: any) => l.id !== labelObj.id);
+      }
+
+      return { ...prevCard, labels: updatedLabels };
+    });
+  };
+
+  useEffect(() => {
     if (cardId) {
       fetchCard();
     }
   }, [cardId]);
-
-  async function fetchLabelsBoard() {
-    try {
-      const response = await apiClient.get(`/boards/${boardId}/labels`);
-      console.log("Fetched labels for board:", response.data);
-      setLabelsBoard(response.data);
-    } catch (error) {
-      console.error("Error fetching labels for board:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const handleClose = () => {
     navigate(`/boards/${boardId}`);
@@ -139,7 +146,12 @@ export function CardDetail() {
                     <AddMember membersCard={card.members} />
                   )}
                 </div>
-                <AddLabel labelsBoard={labelsBoard} labelsCard={card.labels} />
+                <AddLabel
+                  labelsBoard={labelsBoard}
+                  labelsCard={card.labels}
+                  fetchLabelsBoard={fetchLabelsBoard}
+                  onUpdateLabels={handleUpdateLabels}
+                />
                 <AddChecklist />
               </div>
             </div>

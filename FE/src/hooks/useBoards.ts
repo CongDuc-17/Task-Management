@@ -14,7 +14,7 @@ export const useBoards = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [board, setBoard] = useState<Board | null>(null);
-
+  const [labelsBoard, setLabelsBoard] = useState([]);
   const { createBoardToProject } = useProjectsStore();
 
   async function createBoard(
@@ -62,9 +62,30 @@ export const useBoards = () => {
     }
   }
 
+  async function fetchLabelsBoard() {
+    try {
+      const response = await apiClient.get(`/boards/${boardId}/labels`);
+      console.log("Fetched labels for board:", response.data);
+      setLabelsBoard(response.data);
+    } catch (error) {
+      console.error("Error fetching labels for board:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     fetchBoard();
+    fetchLabelsBoard();
   }, [boardId]);
 
-  return { loading, error, board, createBoard, fetchBoard };
+  return {
+    loading,
+    error,
+    board,
+    labelsBoard,
+    createBoard,
+    fetchBoard,
+    fetchLabelsBoard,
+  };
 };

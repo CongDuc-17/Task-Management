@@ -9,16 +9,20 @@ import {
 import { Card, CardTitle } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { SquarePen } from "lucide-react";
-import { useMemo, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
 
 export function AddLabel({
   labelsBoard,
   labelsCard,
+  fetchLabelsBoard,
+  onUpdateLabels,
 }: {
   labelsBoard: any[];
   labelsCard: string[];
+  fetchLabelsBoard: () => void;
+  onUpdateLabels: (action: "add" | "remove", labelObj: any) => void;
 }) {
   const boardId = useParams().boardId as string;
   console.log("Labels from board:", labelsBoard);
@@ -57,10 +61,9 @@ export function AddLabel({
   }, [labelsCard, labelsBoard]);
 
   const handleLabelToggle = async (labelColor: string, labelId: string) => {
-    console.log("Toggling label:", labelColor, "with ID:", labelId);
-    console.log("cardId:", cardId);
-
     const isSelected = selectedLabels.includes(labelId);
+
+    const fullLabelObj = labelsBoard.find((l) => l.id === labelId);
 
     setSelectedLabels((prev) =>
       isSelected ? prev.filter((id) => id !== labelId) : [...prev, labelId],
@@ -68,17 +71,15 @@ export function AddLabel({
 
     try {
       if (isSelected) {
-        // Xóa label nếu đã được chọn
         const response = await apiClient.delete(
           `/cards/${cardId}/labels/${labelId}`,
         );
-        console.log("Removed label from card:", response.data);
+        onUpdateLabels("remove", fullLabelObj);
       } else {
-        // Thêm label nếu chưa được chọn
         const response = await apiClient.post(`/cards/${cardId}/labels`, {
           labelId: labelId,
         });
-        console.log("Added label to card:", response.data);
+        onUpdateLabels("add", fullLabelObj);
       }
     } catch (error) {
       console.error("Error toggling label:", error);
@@ -93,27 +94,29 @@ export function AddLabel({
     handleLabelToggle(label.color, label.id);
   }
 
-  const handleCreateLabel = async () => {
-    console.log(
-      "Creating label with name:",
-      labelName,
-      "and color:",
-      selectedColor,
-    );
+  const handleSaveLabel = async () => {
     if (!labelName.trim() || !selectedColor) return;
 
     try {
-      const response = await apiClient.post(`/boards/${boardId}/labels`, {
-        name: labelName,
-        color: selectedColor,
-      });
+      if (editingLabel) {
+        await apiClient.patch(`/labels/${editingLabel.id}`, {
+          name: labelName,
+          color: selectedColor,
+        });
+      } else {
+        const response = await apiClient.post(`/boards/${boardId}/labels`, {
+          name: labelName,
+          color: selectedColor,
+        });
 
-      const cardResponse = await apiClient.post(`/cards/${cardId}/labels`, {
-        labelId: response.data.id,
-      });
+        await apiClient.post(`/cards/${cardId}/labels`, {
+          labelId: response.data.id,
+        });
 
-      // Cập nhật selectedLabels
-      setSelectedLabels((prev) => [...prev, response.data.id]);
+        onUpdateLabels("add", response.data);
+      }
+
+      fetchLabelsBoard();
 
       // Reset popover
       setLabelInputPopoverOpen(false);
@@ -121,8 +124,19 @@ export function AddLabel({
       setSelectedColor("");
       setEditingLabel(null);
     } catch (error) {
-      console.error("Error creating label:", error);
+      console.error("Error saving label:", error);
     }
+  };
+
+  const handleUpdateLabel = (label: {
+    id: string;
+    name: string;
+    color: string;
+  }) => {
+    setEditingLabel(label);
+    setLabelName(label.name);
+    setSelectedColor(label.color);
+    setLabelInputPopoverOpen(true);
   };
 
   return (
@@ -177,7 +191,7 @@ export function AddLabel({
                             {label.name}
                           </CardTitle>
                         </Card>
-                        <SquarePen />
+                        <SquarePen onClick={() => handleUpdateLabel(label)} />
                       </div>
                     ))}
                   </div>
@@ -185,6 +199,7 @@ export function AddLabel({
                   <Button
                     variant="outline"
                     onClick={() => {
+                      setEditingLabel(null);
                       setLabelInputPopoverOpen(true);
                       setSelectedColor("");
                       setLabelName("");
@@ -198,6 +213,7 @@ export function AddLabel({
                 <Button
                   variant="outline"
                   onClick={() => {
+                    setEditingLabel(null);
                     setLabelInputPopoverOpen(true);
                     setSelectedColor("");
                     setLabelName("");
@@ -208,10 +224,18 @@ export function AddLabel({
                 </Button>
               )}
             </div>
+
             {/* Label Input Popover */}
             <Popover
               open={labelInputPopoverOpen}
-              onOpenChange={setLabelInputPopoverOpen}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingLabel(null);
+                  setLabelName("");
+                  setSelectedColor("");
+                }
+                setLabelInputPopoverOpen(open);
+              }}
             >
               <PopoverTrigger asChild>
                 <div className="absolute bottom-0 right-0 w-[1px] h-full opacity-0 pointer-events-none" />
@@ -224,12 +248,25 @@ export function AddLabel({
               >
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <h4 className="leading-none font-medium">
-                      Create new label
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Choose a color and enter a name
-                    </p>
+                    {editingLabel ? (
+                      <div>
+                        <h4 className="leading-none font-medium">
+                          Edit label "{editingLabel.name}"
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a color and enter a new name
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className="leading-none font-medium">
+                          Create new label
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a color and enter a name
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Hiển thị các màu sắc */}
@@ -260,7 +297,7 @@ export function AddLabel({
                       onChange={(e) => setLabelName(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          handleCreateLabel();
+                          handleSaveLabel();
                         }
                       }}
                     />
@@ -286,11 +323,11 @@ export function AddLabel({
                     </Button>
                     <Button
                       size="sm"
-                      onClick={handleCreateLabel}
+                      onClick={handleSaveLabel}
                       disabled={!labelName.trim() || !selectedColor}
                       className="flex-1"
                     >
-                      Create
+                      {editingLabel ? "Update" : "Create"}
                     </Button>
                   </div>
                 </div>
