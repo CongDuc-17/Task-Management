@@ -65,7 +65,7 @@ export const useBoards = () => {
   async function fetchLabelsBoard() {
     try {
       const response = await apiClient.get(`/boards/${boardId}/labels`);
-      console.log("Fetched labels for board:", response.data);
+
       setLabelsBoard(response.data);
     } catch (error) {
       console.error("Error fetching labels for board:", error);
