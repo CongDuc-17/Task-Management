@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { Card, CardTitle } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
-import { SquarePen } from "lucide-react";
+import { Plus, SquarePen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
@@ -25,8 +25,7 @@ export function AddLabel({
   onUpdateLabels: (action: "add" | "remove", labelObj: any) => void;
 }) {
   const boardId = useParams().boardId as string;
-  console.log("Labels from board:", labelsBoard);
-  console.log("Labels of card:", labelsCard);
+
   const { cardId } = useParams();
 
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
@@ -140,202 +139,226 @@ export function AddLabel({
   };
 
   return (
-    <div>
-      <Popover
-        open={popoverOpen}
-        onOpenChange={(open) => {
-          // Không đóng popover cha nếu popover con đang mở
-          if (labelInputPopoverOpen) {
-            return;
-          }
-          setPopoverOpen(open);
-        }}
-      >
+    <Popover
+      open={popoverOpen}
+      onOpenChange={(open) => {
+        // Không đóng popover cha nếu popover con đang mở
+        if (labelInputPopoverOpen) {
+          return;
+        }
+        setPopoverOpen(open);
+      }}
+    >
+      <div className="flex items-center flex-wrap gap-0.5">
+        {labelsCard.map((label, index) => (
+          <div key={index} className="flex items-center gap-2 ">
+            <Card
+              key={index}
+              className={`p-4  h-10  flex  items-start justify-center gap-2 cursor-pointer`}
+              style={{ backgroundColor: label.color }}
+            >
+              <CardTitle className="text-sm  text-white">
+                {label.name}
+              </CardTitle>
+            </Card>
+          </div>
+        ))}
         <PopoverTrigger asChild>
-          <Button variant="outline">Add Label</Button>
+          <Button variant="outline">
+            <Plus />
+          </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 ">
-          <div className="grid gap-4 relative">
-            <div className="space-y-2">
-              <h4 className="leading-none font-medium">Add Label</h4>
-              <p className="text-sm text-muted-foreground">
-                Set the dimensions for the layer.
-              </p>
-            </div>
+      </div>
+      <PopoverContent className="w-80 ">
+        <div className="grid gap-4 relative">
+          <div className="space-y-2">
+            <h4 className="leading-none font-medium">Add Label</h4>
+            <p className="text-sm text-muted-foreground">
+              Set the dimensions for the layer.
+            </p>
+          </div>
+          <div className="grid gap-2">
             <div className="grid gap-2">
-              <div className="grid gap-2">
-                <Label>Search for a label to add</Label>
-                <Input id="label-search" name="label-search" type="text" />
-              </div>
+              <Label>Search for a label to add</Label>
+              <Input id="label-search" name="label-search" type="text" />
+            </div>
 
-              {labelsBoard.length > 0 ? (
-                <div>
-                  <div className="grid grid-cols gap-2 max-h-56 overflow-y-auto">
-                    {labelsBoard.map((label, index) => (
-                      <div key={index} className="flex items-center gap-2 ">
-                        <Checkbox
-                          id={`label-checkbox-${index}`}
-                          name={`label-checkbox-${index}`}
-                          checked={selectedLabels.includes(label.id)}
-                          onCheckedChange={() =>
-                            handleLabelToggle(label.color, label.id)
-                          }
-                        />
-                        <Card
-                          key={index}
-                          className={`p-4 w-full h-10  flex  items-start justify-center gap-2 cursor-pointer`}
-                          style={{ backgroundColor: label.color }}
-                          onClick={() => handleAddLabel(label)}
-                        >
-                          <CardTitle className="text-sm  text-white">
-                            {label.name}
-                          </CardTitle>
-                        </Card>
-                        <SquarePen onClick={() => handleUpdateLabel(label)} />
-                      </div>
-                    ))}
-                  </div>
+            {labelsBoard.length > 0 ? (
+              <div>
+                <div className="grid grid-cols gap-2 max-h-56 overflow-y-auto">
+                  {labelsBoard.map((label, index) => (
+                    <div key={index} className="flex items-center gap-2 ">
+                      <Checkbox
+                        id={`label-checkbox-${index}`}
+                        name={`label-checkbox-${index}`}
+                        checked={selectedLabels.includes(label.id)}
+                        onCheckedChange={() =>
+                          handleLabelToggle(label.color, label.id)
+                        }
+                      />
+                      <Card
+                        key={index}
+                        className={`p-4 w-full h-10  flex  items-start justify-center gap-2 cursor-pointer`}
+                        style={{ backgroundColor: label.color }}
+                        onClick={() => handleAddLabel(label)}
+                      >
+                        <CardTitle className="text-sm  text-white">
+                          {label.name}
+                        </CardTitle>
+                      </Card>
+                      <SquarePen onClick={() => handleUpdateLabel(label)} />
+                    </div>
+                  ))}
+                </div>
 
+                <div className="flex justify-end gap-2 pt-4">
                   <Button
                     variant="outline"
+                    onClick={() => setPopoverOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
                     onClick={() => {
                       setEditingLabel(null);
                       setLabelInputPopoverOpen(true);
                       setSelectedColor("");
                       setLabelName("");
                     }}
-                    className="mt-2"
                   >
                     Create new label
                   </Button>
                 </div>
-              ) : (
+              </div>
+            ) : (
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setPopoverOpen(false)}>
+                  Cancel
+                </Button>
                 <Button
-                  variant="outline"
                   onClick={() => {
                     setEditingLabel(null);
                     setLabelInputPopoverOpen(true);
                     setSelectedColor("");
                     setLabelName("");
                   }}
-                  className="mt-2"
                 >
                   Create new label
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
-            {/* Label Input Popover */}
-            <Popover
-              open={labelInputPopoverOpen}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setEditingLabel(null);
-                  setLabelName("");
-                  setSelectedColor("");
-                }
-                setLabelInputPopoverOpen(open);
-              }}
+          {/* Label Input Popover */}
+          <Popover
+            open={labelInputPopoverOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditingLabel(null);
+                setLabelName("");
+                setSelectedColor("");
+              }
+              setLabelInputPopoverOpen(open);
+            }}
+          >
+            <PopoverTrigger asChild>
+              <div className="absolute bottom-0 right-0 w-[1px] h-full opacity-0 pointer-events-none" />
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-64"
+              side="right"
+              align="center"
+              sideOffset={17}
             >
-              <PopoverTrigger asChild>
-                <div className="absolute bottom-0 right-0 w-[1px] h-full opacity-0 pointer-events-none" />
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-64"
-                side="right"
-                align="center"
-                sideOffset={17}
-              >
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    {editingLabel ? (
-                      <div>
-                        <h4 className="leading-none font-medium">
-                          Edit label "{editingLabel.name}"
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Choose a color and enter a new name
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <h4 className="leading-none font-medium">
-                          Create new label
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Choose a color and enter a name
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hiển thị các màu sắc */}
-                  <div>
-                    <Label className="text-sm mb-2">Select color</Label>
-                    <div className="grid grid-cols-6 gap-2">
-                      {DEFAULT_LABEL_COLORS.map((color) => (
-                        <div
-                          key={color}
-                          className={`w-8 h-8 rounded cursor-pointer border-2 transition-all ${
-                            selectedColor === color
-                              ? "border-gray-800 scale-110"
-                              : "border-gray-300"
-                          }`}
-                          style={{ backgroundColor: color }}
-                          onClick={() => setSelectedColor(color)}
-                        />
-                      ))}
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  {editingLabel ? (
+                    <div>
+                      <h4 className="leading-none font-medium">
+                        Edit label "{editingLabel.name}"
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a color and enter a new name
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="label-name">Label Name</Label>
-                    <Input
-                      id="label-name"
-                      placeholder="Enter label name..."
-                      value={labelName}
-                      onChange={(e) => setLabelName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSaveLabel();
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {selectedColor && (
-                    <div
-                      className="h-10 rounded flex items-center justify-center text-white font-medium"
-                      style={{ backgroundColor: selectedColor }}
-                    >
-                      Preview
+                  ) : (
+                    <div>
+                      <h4 className="leading-none font-medium">
+                        Create new label
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a color and enter a name
+                      </p>
                     </div>
                   )}
+                </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLabelInputPopoverOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveLabel}
-                      disabled={!labelName.trim() || !selectedColor}
-                      className="flex-1"
-                    >
-                      {editingLabel ? "Update" : "Create"}
-                    </Button>
+                {/* Hiển thị các màu sắc */}
+                <div>
+                  <Label className="text-sm mb-2">Select color</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {DEFAULT_LABEL_COLORS.map((color) => (
+                      <div
+                        key={color}
+                        className={`w-8 h-8 rounded cursor-pointer border-2 transition-all ${
+                          selectedColor === color
+                            ? "border-gray-800 scale-110"
+                            : "border-gray-300"
+                        }`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setSelectedColor(color)}
+                      />
+                    ))}
                   </div>
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="label-name">Label Name</Label>
+                  <Input
+                    id="label-name"
+                    placeholder="Enter label name..."
+                    value={labelName}
+                    onChange={(e) => setLabelName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveLabel();
+                      }
+                    }}
+                  />
+                </div>
+
+                {selectedColor && (
+                  <div
+                    className="h-10 rounded flex items-center justify-center text-white font-medium"
+                    style={{ backgroundColor: selectedColor }}
+                  >
+                    Preview
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLabelInputPopoverOpen(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveLabel}
+                    disabled={!labelName.trim() || !selectedColor}
+                    className="flex-1"
+                  >
+                    {editingLabel ? "Update" : "Create"}
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

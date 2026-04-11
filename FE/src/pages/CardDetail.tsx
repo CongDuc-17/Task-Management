@@ -10,12 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { AddChecklist } from "@/components/cards/AddChecklist";
 import { AddMember } from "@/components/cards/AddMember";
 import { AddLabel } from "@/components/cards/AddLabel";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import {
   Avatar,
   AvatarBadge,
@@ -24,7 +24,12 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+
+import { Progress } from "@/components/ui/progress";
 import { useBoards } from "@/hooks/useBoards";
+
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 interface Card {
   id: string;
   title: string;
@@ -45,6 +50,10 @@ export function CardDetail() {
   const [loading, setLoading] = useState(true);
   const [newDescription, setNewDescription] = useState("");
   const [newComments, setComments] = useState("");
+  const [activeChecklistId, setActiveChecklistId] = useState<string | null>(
+    null,
+  );
+  const [inputValue, setInputValue] = useState("");
 
   const { labelsBoard, fetchLabelsBoard } = useBoards();
 
@@ -76,13 +85,66 @@ export function CardDetail() {
       if (action === "add") {
         updatedLabels.push(labelObj);
       } else if (action === "remove") {
-        // Giả sử mảng labels chứa các object có id
         updatedLabels = updatedLabels.filter((l: any) => l.id !== labelObj.id);
       }
 
       return { ...prevCard, labels: updatedLabels };
     });
   };
+
+  const handleUpdateChecklist = (
+    action: "add" | "remove",
+    checklistObj: any,
+  ) => {
+    setCard((prevCard) => {
+      if (!prevCard) return prevCard;
+      let updatedChecklists = prevCard.checklists
+        ? [...prevCard.checklists]
+        : [];
+
+      if (action === "add") {
+        updatedChecklists.push(checklistObj);
+      } else if (action === "remove") {
+        updatedChecklists = updatedChecklists.filter(
+          (c: any) => c.id !== checklistObj.id,
+        );
+      }
+      return { ...prevCard, checklists: updatedChecklists };
+    });
+  };
+
+  async function handleAddChecklistItem(checklistId: string) {
+    try {
+      const response = await apiClient.post(`/checklists/${checklistId}`, {
+        title: inputValue,
+      });
+
+      setCard((prevCard) => {
+        if (!prevCard) return prevCard;
+
+        const updatedChecklists = prevCard.checklists.map((checklist: any) => {
+          if (checklist.id === checklistId) {
+            return {
+              ...checklist,
+              checklistItems: [
+                ...(checklist.checklistItems || []),
+                response.data,
+              ],
+            };
+          }
+          return checklist;
+        });
+
+        return { ...prevCard, checklists: updatedChecklists };
+      });
+
+      setInputValue("");
+      setActiveChecklistId(null);
+      console.log("Checklist item added", response.data);
+    } catch (error) {
+      console.error("Error adding checklist item:", error);
+    }
+  }
 
   useEffect(() => {
     if (cardId) {
@@ -96,7 +158,7 @@ export function CardDetail() {
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="w-9/12 top-3/12  transform -translate-x-1/2 -translate-y-1/2 max-w-none! bg-background rounded-lg shadow-md p-6 overflow-y-auto">
+      <DialogContent className="w-9/12 max-w-none! left-1/2 !top-0 !translate-y-0 transform -translate-x-1/2 mt-16 max-h-[85vh] bg-background rounded-lg shadow-md p-6 ">
         {card && (
           <DialogHeader className="flex  justify-between">
             <DialogTitle className="text-xl font-bold">
@@ -125,34 +187,109 @@ export function CardDetail() {
                   }}
                 />
               </div>
-              <div className="flex flex-row flex-wrap items-center pr-4 gap-2">
-                <div>
-                  {card.members?.length > 0 ? (
-                    <AvatarGroup className="grayscale">
-                      {card.members.map((member, index) => (
-                        <Avatar key={index}>
-                          <AvatarImage
-                            src={member.userAvatar}
-                            alt={member.userAvatar}
-                          />
-                          <AvatarFallback>{member.userName}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                      <AvatarGroupCount>
-                        <AddMember membersCard={card.members} />
-                      </AvatarGroupCount>
-                    </AvatarGroup>
-                  ) : (
-                    <AddMember membersCard={card.members} />
-                  )}
-                </div>
+              <div className="flex items-center flex-wrap pr-4 gap-2">
+                {card.members?.length > 0 ? (
+                  <AvatarGroup className="grayscale">
+                    {card.members.map((member, index) => (
+                      <Avatar key={index}>
+                        <AvatarImage
+                          src={member.userAvatar}
+                          alt={member.userAvatar}
+                        />
+                        <AvatarFallback>{member.userName}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                    <AvatarGroupCount>
+                      <AddMember membersCard={card.members} />
+                    </AvatarGroupCount>
+                  </AvatarGroup>
+                ) : (
+                  <AddMember membersCard={card.members} />
+                )}
+
                 <AddLabel
                   labelsBoard={labelsBoard}
                   labelsCard={card.labels}
                   fetchLabelsBoard={fetchLabelsBoard}
                   onUpdateLabels={handleUpdateLabels}
                 />
-                <AddChecklist />
+
+                <AddChecklist onUpdateChecklist={handleUpdateChecklist} />
+              </div>
+
+              {/* checklist */}
+              <div className="overflow-y-auto max-h-[50vh] flex flex-col gap-4 ">
+                {card.checklists?.map((checklist, index) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-between ">
+                      <div>{checklist.title}</div>
+                      <Trash2 />
+                    </div>
+                    <Progress
+                      value={
+                        (checklist.completedCount / checklist.itemCount) * 100
+                      }
+                      className="mt-2 mb-2"
+                    />
+
+                    {checklist.checklistItems.map((item, indexItem) => (
+                      <div>
+                        <div
+                          key={indexItem}
+                          className="flex items-center gap-2 pl-4"
+                        >
+                          <Checkbox checked={item.completed} />
+                          <span>{item.title}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {activeChecklistId === checklist.id ? (
+                      <div className="flex gap-2 p-2">
+                        <Input
+                          id="checklist-item"
+                          name="checklist-item"
+                          type="text"
+                          placeholder="Add checklist item..."
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          autoFocus
+                        />
+                        <Button
+                          variant="default"
+                          size="sm"
+                          // onClick={() => {
+                          //   // Add item logic here
+                          //   setActiveChecklistId(null);
+                          //   setInputValue("");
+                          // }}
+                          onClick={() => {
+                            handleAddChecklistItem(checklist.id);
+                          }}
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setActiveChecklistId(null);
+                            setInputValue("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveChecklistId(checklist.id)}
+                        className=" mt-2"
+                      >
+                        Add Checklist Item
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 

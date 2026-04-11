@@ -6,53 +6,66 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { apiClient } from "@/lib/apiClient";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 
-export function AddChecklist() {
+export function AddChecklist({
+  onUpdateChecklist,
+}: {
+  onUpdateChecklist: (action: "add" | "remove", checklistObj: any) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const { cardId } = useParams() as { cardId: string };
+
+  async function handleAddChecklist() {
+    console.log("Add Checklist", title);
+    try {
+      const response = await apiClient.post(`/cards/${cardId}/checklists`, {
+        title,
+      });
+      setTitle("");
+      setPopoverOpen(false);
+      if (onUpdateChecklist) {
+        onUpdateChecklist("add", response.data);
+      }
+      console.log("Checklist added", response.data);
+    } catch (error) {
+      console.error("Error adding checklist", error);
+    }
+  }
   return (
-    <Popover>
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline">Add Checklist</Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-90">
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="leading-none font-medium">Add Checklist</h4>
-            <p className="text-sm text-muted-foreground">
-              Set the dimensions for the layer.
-            </p>
+            <div className="text-xs text-muted-foreground">
+              Add a checklist to your task to keep track of your progress.
+            </div>
           </div>
           <div className="grid gap-2">
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Width</Label>
+            <div className="grid grid-cols-5 items-center gap-4">
+              <Label htmlFor="width">Title</Label>
               <Input
                 id="width"
-                defaultValue="100%"
-                className="col-span-2 h-8"
+                className="col-span-4 h-8"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="maxWidth">Max. width</Label>
-              <Input
-                id="maxWidth"
-                defaultValue="300px"
-                className="col-span-2 h-8"
-              />
-            </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="height">Height</Label>
-              <Input
-                id="height"
-                defaultValue="25px"
-                className="col-span-2 h-8"
-              />
-            </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="maxHeight">Max. height</Label>
-              <Input
-                id="maxHeight"
-                defaultValue="none"
-                className="col-span-2 h-8"
-              />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setPopoverOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleAddChecklist()}>
+                Add Checklist
+              </Button>
             </div>
           </div>
         </div>
