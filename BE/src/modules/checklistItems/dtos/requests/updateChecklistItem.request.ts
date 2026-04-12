@@ -12,8 +12,16 @@ const updateChecklistItemRequestParams = z
 
 const updateChecklistItemRequestBody = z
 	.object({
-		content: z.string().min(1).max(255).describe('Updated checklist item content'),
-		isCompleted: z.boolean().describe('Updated checklist item completion status'),
+		title: z
+			.string()
+			.min(1)
+			.max(255)
+			.optional()
+			.describe('Updated checklist item content'),
+		completed: z
+			.boolean()
+			.optional()
+			.describe('Updated checklist item completion status'),
 	})
 	.strict();
 

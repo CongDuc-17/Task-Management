@@ -8,8 +8,6 @@ import { autoBindUtil, validateRequestMiddleware } from '@/common';
 import authMiddleware from '@/common/middlewares/auth.middleware';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
 import {
-	addRemoveLabelRequestSchema,
-	addRemoveLabelRequestValidationSchema,
 	addMemberRequestSchema,
 	addMemberRequestValidationSchema,
 	cardResponseDtoSchema,
@@ -22,6 +20,10 @@ import {
 	updateInformationCardRequestValidationSchema,
 	removeMemberRequestValidationSchema,
 	removeMemberRequestSchema,
+	addLabelRequestSchema,
+	addLabelRequestValidationSchema,
+	removeLabelRequestSchema,
+	removeLabelRequestValidationSchema,
 } from './dtos';
 
 import { CardPermissionEnum } from '@/common/enums/permissions';
@@ -92,14 +94,14 @@ cardsRegistry.registerPath({
 	method: 'post',
 	path: '/cards/{cardId}/labels',
 	tags: ['Cards'],
-	request: addRemoveLabelRequestSchema,
+	request: addLabelRequestSchema,
 	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/:cardId/labels',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
-	validateRequestMiddleware(addRemoveLabelRequestValidationSchema),
+	validateRequestMiddleware(addLabelRequestValidationSchema),
 	cardsController.addLabelToCard,
 );
 
@@ -107,14 +109,14 @@ cardsRegistry.registerPath({
 	method: 'delete',
 	path: '/cards/{cardId}/labels/{labelId}',
 	tags: ['Cards'],
-	request: addRemoveLabelRequestSchema,
+	request: removeLabelRequestSchema,
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
 	'/:cardId/labels/:labelId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
-	validateRequestMiddleware(addRemoveLabelRequestValidationSchema),
+	validateRequestMiddleware(removeLabelRequestValidationSchema),
 	cardsController.removeLabelFromCard,
 );
 

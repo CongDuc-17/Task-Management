@@ -44,14 +44,20 @@ export class ChecklistItemsRepository {
 			completed?: boolean;
 		},
 	): Promise<checklistItems> {
+		// Chỉ build object với những field được truyền (không undefined)
+		const updateData: any = {};
+		if (data.title !== undefined) {
+			updateData.title = data.title;
+		}
+		if (data.completed !== undefined) {
+			updateData.completed = data.completed;
+		}
+
 		return this.prismaService.checklistItems.update({
 			where: {
 				id: checklistItemId,
 			},
-			data: {
-				title: data.title,
-				completed: data.completed,
-			},
+			data: updateData,
 		});
 	}
 
