@@ -5,6 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -54,6 +56,8 @@ export function CardDetail() {
     null,
   );
   const [inputValue, setInputValue] = useState("");
+  const [confirmDeleteChecklistId, setConfirmDeleteChecklistId] =
+    useState(false);
 
   const { labelsBoard, fetchLabelsBoard } = useBoards();
 
@@ -74,6 +78,25 @@ export function CardDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateMembers = (action: "add" | "remove", memberObj: any) => {
+    setCard((prevCard) => {
+      if (!prevCard) return prevCard;
+      let updatedMembers = prevCard.members ? [...prevCard.members] : [];
+
+      if (action === "add") {
+        updatedMembers.push(memberObj);
+      } else if (action === "remove") {
+        // Logic so sánh ID tùy thuộc vào cấu trúc backend trả về
+        updatedMembers = updatedMembers.filter(
+          (m: any) =>
+            (m.userId || m.user?.id) !==
+            (memberObj.userId || memberObj.user?.id),
+        );
+      }
+      return { ...prevCard, members: updatedMembers };
+    });
   };
 
   const handleUpdateLabels = (action: "add" | "remove", labelObj: any) => {
@@ -146,6 +169,66 @@ export function CardDetail() {
     }
   }
 
+  async function handleCompletedChecklistItem(
+    checklistItemId: string,
+    newCheckedState: boolean,
+  ) {
+    try {
+      setCard((prevCard) => {
+        if (!prevCard) return prevCard;
+
+        const updatedChecklists = prevCard.checklists?.map((checklist: any) => {
+          // Thêm ( || [] ) để tránh lỗi văng app nếu checklist rỗng
+          const updatedItems = (checklist.checklistItems || []).map(
+            (item: any) => {
+              if (item.id === checklistItemId) {
+                return { ...item, completed: newCheckedState }; // Dùng luôn state mới
+              }
+              return item;
+            },
+          );
+
+          return {
+            ...checklist,
+            checklistItems: updatedItems,
+            completedCount: updatedItems.filter((i: any) => i.completed).length,
+          };
+        });
+
+        return { ...prevCard, checklists: updatedChecklists };
+      });
+
+      await apiClient.patch(`/checklist-items/${checklistItemId}`, {
+        completed: newCheckedState,
+      });
+    } catch (error) {
+      console.error("Error updating checklist item:", error);
+      // Lưu ý: Nếu API lỗi, bạn có thể thiết kế thêm logic để setCard lùi lại trạng thái cũ
+    }
+  }
+
+  async function handleDeleteChecklist(checklistId: string) {
+    const previousCard = { ...card };
+    setConfirmDeleteChecklistId(true);
+
+    setCard((prevCard) => {
+      if (!prevCard) return prevCard;
+      return {
+        ...prevCard,
+        checklists: prevCard.checklists?.filter((c) => c.id !== checklistId),
+      };
+    });
+
+    try {
+      await apiClient.delete(`/checklists/${checklistId}`);
+      console.log("Deleted checklist successfully");
+    } catch (error) {
+      console.error("Error deleting checklist:", error);
+      setCard(previousCard as Card);
+      alert("Xóa thất bại, vui lòng thử lại!");
+    }
+  }
+
   useEffect(() => {
     if (cardId) {
       fetchCard();
@@ -200,11 +283,17 @@ export function CardDetail() {
                       </Avatar>
                     ))}
                     <AvatarGroupCount>
-                      <AddMember membersCard={card.members} />
+                      <AddMember
+                        membersCard={card.members}
+                        onUpdateMembers={handleUpdateMembers}
+                      />
                     </AvatarGroupCount>
                   </AvatarGroup>
                 ) : (
-                  <AddMember membersCard={card.members} />
+                  <AddMember
+                    membersCard={card.members}
+                    onUpdateMembers={handleUpdateMembers}
+                  />
                 )}
 
                 <AddLabel
@@ -219,77 +308,123 @@ export function CardDetail() {
 
               {/* checklist */}
               <div className="overflow-y-auto max-h-[50vh] flex flex-col gap-4 ">
-                {card.checklists?.map((checklist, index) => (
-                  <div key={index}>
-                    <div className="flex items-center justify-between ">
-                      <div>{checklist.title}</div>
-                      <Trash2 />
-                    </div>
-                    <Progress
-                      value={
-                        (checklist.completedCount / checklist.itemCount) * 100
-                      }
-                      className="mt-2 mb-2"
-                    />
+                {card.checklists?.map((checklist, index) => {
+                  const totalItems = checklist.checklistItems?.length || 0;
+                  const completedItems =
+                    checklist.checklistItems?.filter((i: any) => i.completed)
+                      .length || 0;
+                  const progressPercent =
+                    totalItems === 0
+                      ? 0
+                      : Math.round((completedItems / totalItems) * 100);
+                  return (
+                    <div
+                      key={checklist.id || index}
+                      className="border rounded p-4"
+                    >
+                      <div className="flex items-center justify-between ">
+                        <div>{checklist.title}</div>
 
-                    {checklist.checklistItems.map((item, indexItem) => (
-                      <div>
-                        <div
-                          key={indexItem}
-                          className="flex items-center gap-2 pl-4"
-                        >
-                          <Checkbox checked={item.completed} />
-                          <span>{item.title}</span>
-                        </div>
+                        <Dialog>
+                          <DialogTrigger>
+                            <Trash2 className="cursor-pointer text-gray-400 hover:text-red-500 transition" />
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle className="text-red-500">
+                                Are you absolutely sure you want to delete this
+                                checklist?
+                              </DialogTitle>
+                              <DialogDescription>
+                                This action cannot be undone. This will
+                                permanently{" "}
+                                <span className="font-bold">
+                                  delete the checklist {checklist.title} and all
+                                  its items
+                                </span>{" "}
+                                and remove your data from our servers.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Button
+                              onClick={() =>
+                                handleDeleteChecklist(checklist.id)
+                              }
+                              className="hover:bg-red-500 transition cursor-pointer"
+                            >
+                              I understand, delete checklist
+                            </Button>
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                    ))}
-                    {activeChecklistId === checklist.id ? (
-                      <div className="flex gap-2 p-2">
-                        <Input
-                          id="checklist-item"
-                          name="checklist-item"
-                          type="text"
-                          placeholder="Add checklist item..."
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          autoFocus
-                        />
-                        <Button
-                          variant="default"
-                          size="sm"
-                          // onClick={() => {
-                          //   // Add item logic here
-                          //   setActiveChecklistId(null);
-                          //   setInputValue("");
-                          // }}
-                          onClick={() => {
-                            handleAddChecklistItem(checklist.id);
-                          }}
-                        >
-                          Add
-                        </Button>
+                      <Progress value={progressPercent} className="mt-2 mb-2" />
+
+                      {checklist?.checklistItems?.map((item, indexItem) => (
+                        <div key={item.id || indexItem}>
+                          <div className="flex items-center gap-2 pl-4">
+                            <Checkbox
+                              checked={item.completed || false}
+                              onCheckedChange={(checked) =>
+                                handleCompletedChecklistItem(
+                                  item.id,
+                                  checked as boolean,
+                                )
+                              }
+                            />
+                            <span
+                              className={
+                                item.completed
+                                  ? "line-through text-gray-400"
+                                  : ""
+                              }
+                            >
+                              {item.title}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {activeChecklistId === checklist.id ? (
+                        <div className="flex gap-2 p-2">
+                          <Input
+                            id="checklist-item"
+                            name="checklist-item"
+                            type="text"
+                            placeholder="Add checklist item..."
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            autoFocus
+                          />
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => {
+                              handleAddChecklistItem(checklist.id);
+                            }}
+                          >
+                            Add
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setActiveChecklistId(null);
+                              setInputValue("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
                           variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setActiveChecklistId(null);
-                            setInputValue("");
-                          }}
+                          onClick={() => setActiveChecklistId(checklist.id)}
+                          className=" mt-2"
                         >
-                          Cancel
+                          Add Checklist Item
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => setActiveChecklistId(checklist.id)}
-                        className=" mt-2"
-                      >
-                        Add Checklist Item
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

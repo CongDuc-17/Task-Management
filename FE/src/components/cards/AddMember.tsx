@@ -16,18 +16,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useBoards } from "@/hooks/useBoards";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
 import { Plus, X } from "lucide-react";
-export function AddMember({ membersCard }: { membersCard: any[] }) {
+export function AddMember({
+  membersCard,
+  onUpdateMembers,
+}: {
+  membersCard: any[];
+  onUpdateMembers: (action: "add" | "remove", memberObj: any) => void;
+}) {
   const cardId = useParams().cardId as string;
   const { board, fetchBoard } = useBoards();
-  const [cardMembers, setCardMembers] = useState<any[]>(membersCard || []);
+
+  console.log("Members of card", membersCard);
 
   // Lấy list userId đã có trên card
-  const cardMemberIds = cardMembers.map(
+  const cardMemberIds = membersCard.map(
     (member) => member.userId || member.user?.id,
   );
 
@@ -40,14 +47,12 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
       // Optimistic update
       const memberToAdd = board?.members?.find((m) => m.user.id === memberId);
       if (memberToAdd) {
-        setCardMembers([
-          ...cardMembers,
-          {
-            userId: memberId,
-            userName: memberToAdd.user.name,
-            userAvatar: memberToAdd.user.avatar,
-          },
-        ]);
+        const newMember = {
+          userId: memberId,
+          userName: memberToAdd.user.name,
+          userAvatar: memberToAdd.user.avatar,
+        };
+        onUpdateMembers("add", newMember);
       }
     } catch (error) {
       console.error("Error adding member to card:", error);
@@ -60,12 +65,7 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
         `/cards/${cardId}/members/${memberId}`,
       );
 
-      // Optimistic update
-      setCardMembers(
-        cardMembers.filter(
-          (member) => (member.userId || member.user?.id) !== memberId,
-        ),
-      );
+      onUpdateMembers("remove", { userId: memberId });
     } catch (error) {
       console.error("Error removing member from card:", error);
     }
@@ -99,11 +99,11 @@ export function AddMember({ membersCard }: { membersCard: any[] }) {
 
           <div className="flex flex-col gap-2  overflow-y-scroll   max-h-60">
             <div className="text-sm text-muted-foreground">Member of card</div>
-            {cardMembers?.map((member, index) => (
+            {membersCard?.map((member, index) => (
               <Button
                 variant={"outline"}
                 className="flex justify-between h-auto items-center hover:bg-white"
-                key={index}
+                key={member.userId || member.id || index}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center ">
