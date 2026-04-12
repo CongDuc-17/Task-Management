@@ -27,11 +27,11 @@ export class LabelsService {
 			);
 		}
 
-		await this.labelsRepository.createLabel({ name, color, boardId });
+		const label = await this.labelsRepository.createLabel({ name, color, boardId });
 
 		return {
 			success: true,
-			data: new LabelResponseDto({ name, color, boardId }),
+			data: new LabelResponseDto({ ...label }),
 		};
 	}
 

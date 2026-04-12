@@ -116,7 +116,8 @@ export class CardsRepository {
 					id: true,
 					title: true,
 					checklistItems: {
-						select: { id: true, completed: true },
+						select: { id: true, title: true, completed: true },
+						orderBy: { createdAt: 'asc' },
 					},
 				},
 			};

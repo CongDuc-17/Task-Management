@@ -38,7 +38,7 @@ checklistItemsRegistry.registerPath({
 router.patch(
 	'/:checklistItemId',
 	authMiddleware.verifyAccessToken,
-	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
+	//authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
 	validateRequestMiddleware(updateChecklistItemValidationSchema),
 	checklistItemsController.updateChecklistItem,
 );

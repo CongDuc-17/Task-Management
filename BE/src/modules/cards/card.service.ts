@@ -118,7 +118,7 @@ export class CardsService {
 				: undefined,
 			labels: include.labels
 				? card.cardLabels?.map((cl: any) => ({
-						id: cl.id,
+						id: cl.label.id,
 						name: cl.label.name,
 						color: cl.label.color,
 					}))
@@ -127,6 +127,7 @@ export class CardsService {
 				? card.checklists?.map((c: any) => ({
 						id: c.id,
 						title: c.title,
+						checklistItems: c.checklistItems,
 						itemCount: c.checklistItems.length,
 						completedCount: c.checklistItems.filter((ci: any) => ci.completed)
 							.length,

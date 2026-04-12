@@ -25,6 +25,7 @@ export class ChecklistItemsController {
 	async updateChecklistItem(req: Request): Promise<Response> {
 		const { checklistItemId } = req.params as { checklistItemId: string };
 		const { title, completed } = req.body;
+		console.log('Update Checklist Item', checklistItemId, title, completed);
 		const result = await this.checklistItemsService.updateChecklistItem(
 			checklistItemId,
 			title,
