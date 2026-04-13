@@ -21,21 +21,16 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
 import { Plus, X } from "lucide-react";
-export function AddMember({
-  membersCard,
-  onUpdateMembers,
-}: {
-  membersCard: any[];
-  onUpdateMembers: (action: "add" | "remove", memberObj: any) => void;
-}) {
+import { useCardsStore } from "@/stores/cards.store";
+export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
   const cardId = useParams().cardId as string;
   const { board, fetchBoard } = useBoards();
-
+  const { addMember, removeMember } = useCardsStore();
   // Lấy list userId đã có trên card
   const cardMemberIds = membersCard.map(
     (member) => member.userId || member.user?.id,
   );
-
+  console.log("Card members in AddMember component:", membersCard);
   async function handleAddMemberToCard(memberId: string) {
     try {
       const response = await apiClient.post(`/cards/${cardId}/members`, {
@@ -46,11 +41,12 @@ export function AddMember({
       const memberToAdd = board?.members?.find((m) => m.user.id === memberId);
       if (memberToAdd) {
         const newMember = {
-          userId: memberId,
-          userName: memberToAdd.user.name,
-          userAvatar: memberToAdd.user.avatar,
+          id: memberId,
+          name: memberToAdd.user.name,
+          avatar: memberToAdd.user.avatar,
         };
-        onUpdateMembers("add", newMember);
+
+        addMember(cardId, newMember); // Cập nhật ngay trong store để UI phản hồi nhanh
       }
     } catch (error) {
       console.error("Error adding member to card:", error);
@@ -63,7 +59,8 @@ export function AddMember({
         `/cards/${cardId}/members/${memberId}`,
       );
 
-      onUpdateMembers("remove", { userId: memberId });
+      // onUpdateMembers("remove", { userId: memberId });
+      removeMember(cardId, memberId); // Cập nhật ngay trong store để UI phản hồi nhanh
     } catch (error) {
       console.error("Error removing member from card:", error);
     }
@@ -101,13 +98,14 @@ export function AddMember({
               <Button
                 variant={"outline"}
                 className="flex justify-between h-auto items-center hover:bg-white"
-                key={member.userId || member.id || index}
+                key={member.userId || member.user.id || index}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center ">
-                    {member.userAvatar}
+                <div className="flex items-center r gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-300 justify-center flex items-center ">
+                    {member.userName ||
+                      member.user?.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>{member.userName}</div>
+                  <div>{member.user?.name}</div>
                 </div>
 
                 <Button
@@ -135,9 +133,11 @@ export function AddMember({
                   onClick={() => handleAddMemberToCard(member.user.id)}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center ">
-                      {member.user.avatar}
+                    <div className="w-8 h-8 rounded-full bg-gray-300 justify-center flex items-center ">
+                      {member.userName ||
+                        member.user?.name.charAt(0).toUpperCase()}
                     </div>
+
                     <div>{member.user.name}</div>
                   </div>
                 </Button>

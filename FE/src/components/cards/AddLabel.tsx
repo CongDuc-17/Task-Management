@@ -91,13 +91,9 @@ export function AddLabel({
         await apiClient.delete(`/cards/${cardId}/labels/${labelId}`);
       } else {
         addLabel(cardId, {
-          labelId: fullLabelObj.id, // ← thêm field này
-          label: {
-            // ← wrap vào .label để đồng nhất với API
-            id: fullLabelObj.id,
-            name: fullLabelObj.name,
-            color: fullLabelObj.color,
-          },
+          id: fullLabelObj.id,
+          name: fullLabelObj.name,
+          color: fullLabelObj.color,
         });
         await apiClient.post(`/cards/${cardId}/labels`, { labelId });
       }
