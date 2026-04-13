@@ -96,10 +96,11 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
     return cards.find((c) => c.id === currentCardId);
   },
   createCard: (card) => set((state) => ({ cards: [...state.cards, card] })),
+
   updateCard: (updatedCard) =>
     set((state) => ({
-      cards: state.cards.map((card) =>
-        card.id === updatedCard.id ? updatedCard : card,
+      cards: state.cards.map((c) =>
+        c.id === updatedCard.id ? { ...c, ...updatedCard } : c,
       ),
     })),
   deleteCard: (cardId) =>

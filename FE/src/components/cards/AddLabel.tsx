@@ -36,7 +36,7 @@ export function AddLabel({
   const currentCardLabels = card?.cardLabels || []; //lay
 
   const selectedLabelIds = currentCardLabels.map(
-    (label: any) => label.labelId || label.label?.id,
+    (label: any) => label.labelId || label.label?.id || label.id,
   );
 
   const [pendingLabelIds, setPendingLabelIds] = useState<Set<string>>(
@@ -91,9 +91,13 @@ export function AddLabel({
         await apiClient.delete(`/cards/${cardId}/labels/${labelId}`);
       } else {
         addLabel(cardId, {
-          id: fullLabelObj.id,
-          name: fullLabelObj.name,
-          color: fullLabelObj.color,
+          labelId: fullLabelObj.id, // ← thêm field này
+          label: {
+            // ← wrap vào .label để đồng nhất với API
+            id: fullLabelObj.id,
+            name: fullLabelObj.name,
+            color: fullLabelObj.color,
+          },
         });
         await apiClient.post(`/cards/${cardId}/labels`, { labelId });
       }

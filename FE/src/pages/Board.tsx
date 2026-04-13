@@ -60,11 +60,10 @@ export function Board() {
   const navigate = useNavigate();
   const { board, fetchBoard } = useBoards();
   const { lists, createList, loading: listsLoading } = useLists(boardId);
-  const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
+  //const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
 
   // Lấy cards từ Zustand Store
   const { cards, setCards } = useCardsStore();
-  console.log("Cards from store:", cards);
   // Fetch cards từ API và lưu vào store
   const fetchCardsForBoard = async (targetListIds: string[]) => {
     if (!targetListIds.length) {
@@ -76,6 +75,7 @@ export function Board() {
       const cardsByList = await Promise.all(
         targetListIds.map(async (listId) => {
           const response = await apiClient.get(`/lists/${listId}/cards`);
+          console.log(`Fetched cards for list ${listId}:`, response);
           const payload = (response as { data?: unknown }).data ?? response;
           const listCards = Array.isArray(payload) ? payload : [];
           return listCards.map((card: any) => ({ ...card, listId }));
@@ -83,18 +83,19 @@ export function Board() {
       );
 
       setCards(cardsByList.flat());
-      console.log("📦 Fetched cards for board:", cardsByList.flat());
     } catch (error) {
       console.error("❌ Failed to fetch cards:", error);
     }
   };
 
-  // Fetch cards khi listIds thay đổi
+  const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
+  const listIdsKey = listIds.join(","); //  string ổn định, không tạo reference mới
+
   useEffect(() => {
     if (listIds.length) {
       fetchCardsForBoard(listIds);
     }
-  }, [listIds]);
+  }, [listIdsKey]);
 
   // Create card và lưu vào store
   const createCard = async (listId: string, title: string) => {
@@ -107,7 +108,6 @@ export function Board() {
       if (newCard && typeof newCard === "object" && "id" in newCard) {
         // Thêm card mới vào store
         setCards([...cards, { ...newCard, listId }]);
-        console.log("✅ Card created and added to store:", newCard);
       }
     } catch (error) {
       console.error("❌ Failed to create card:", error);

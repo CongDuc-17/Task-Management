@@ -17,10 +17,9 @@ import { AddChecklist } from "@/components/cards/AddChecklist";
 import { AddMember } from "@/components/cards/AddMember";
 import { AddLabel } from "@/components/cards/AddLabel";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardTitle } from "@/components/ui/card";
+
 import {
   Avatar,
-  AvatarBadge,
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
@@ -41,7 +40,7 @@ interface Card {
   position: number;
   createdAt?: string;
   updatedAt?: string;
-  cardMembers: any[];
+  cardMembers?: any[];
   cardLabels?: any[];
   checklists?: any[];
 }
@@ -49,7 +48,6 @@ interface Card {
 export function CardDetail() {
   const { cardId, boardId } = useParams();
   const navigate = useNavigate();
-  // const [card, setCard] = useState<Card | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [newDescription, setNewDescription] = useState("");
@@ -79,17 +77,15 @@ export function CardDetail() {
       );
       setCurrentCardId(cardId || null);
 
-      // Merge card mới vào mảy cards hiện có (không replace hết)
-      const existingCard = cards.find((c) => c.id === cardId);
+      // Dùng getState() tránh stale closure, luôn merge
+      const existingCard = useCardsStore
+        .getState()
+        .cards.find((c) => c.id === cardId);
       if (existingCard) {
-        // Card đã có → update
-        updateCard(response.data);
+        updateCard(response.data); // merge nhờ fix ở store
       } else {
-        // Card chưa có → thêm vào
-        setCards([...cards, response.data]);
+        setCards([...useCardsStore.getState().cards, response.data]);
       }
-
-      console.log("Fetched card:", response.data);
     } catch (error) {
       console.error("Error fetching card:", error);
     } finally {
@@ -99,69 +95,58 @@ export function CardDetail() {
 
   console.log("cards from store in CardDetail:", cards);
   const handleUpdateMembers = (action: "add" | "remove", memberObj: any) => {
-    setCard((prevCard) => {
-      if (!prevCard) return prevCard;
-      let updatedMembers = prevCard.members ? [...prevCard.members] : [];
+    if (!card) return;
+    let updatedMembers = card.cardMembers ? [...card.cardMembers] : [];
 
-      if (action === "add") {
-        updatedMembers.push(memberObj);
-      } else if (action === "remove") {
-        // Logic so sánh ID tùy thuộc vào cấu trúc backend trả về
-        updatedMembers = updatedMembers.filter(
-          (m: any) =>
-            (m.userId || m.user?.id) !==
-            (memberObj.userId || memberObj.user?.id),
-        );
-      }
-      return { ...prevCard, members: updatedMembers };
-    });
+    if (action === "add") {
+      updatedMembers.push(memberObj);
+    } else if (action === "remove") {
+      updatedMembers = updatedMembers.filter(
+        (m: any) =>
+          (m.userId || m.user?.id) !== (memberObj.userId || memberObj.user?.id),
+      );
+    }
+    updateCard({ ...card, cardMembers: updatedMembers });
   };
 
   const handleUpdateChecklist = (
     action: "add" | "remove",
     checklistObj: any,
   ) => {
-    setCard((prevCard) => {
-      if (!prevCard) return prevCard;
-      let updatedChecklists = prevCard.checklists
-        ? [...prevCard.checklists]
-        : [];
+    if (!card) return;
+    let updatedChecklists = card.checklists ? [...card.checklists] : [];
 
-      if (action === "add") {
-        updatedChecklists.push(checklistObj);
-      } else if (action === "remove") {
-        updatedChecklists = updatedChecklists.filter(
-          (c: any) => c.id !== checklistObj.id,
-        );
-      }
-      return { ...prevCard, checklists: updatedChecklists };
-    });
+    if (action === "add") {
+      updatedChecklists.push(checklistObj);
+    } else if (action === "remove") {
+      updatedChecklists = updatedChecklists.filter(
+        (c: any) => c.id !== checklistObj.id,
+      );
+    }
+    updateCard({ ...card, checklists: updatedChecklists });
   };
 
   async function handleAddChecklistItem(checklistId: string) {
     try {
+      if (!card) return;
       const response = await apiClient.post(`/checklists/${checklistId}`, {
         title: inputValue,
       });
 
-      setCard((prevCard) => {
-        if (!prevCard) return prevCard;
-
-        const updatedChecklists = prevCard.checklists.map((checklist: any) => {
-          if (checklist.id === checklistId) {
-            return {
-              ...checklist,
-              checklistItems: [
-                ...(checklist.checklistItems || []),
-                response.data,
-              ],
-            };
-          }
-          return checklist;
-        });
-
-        return { ...prevCard, checklists: updatedChecklists };
+      const updatedChecklists = card.checklists?.map((checklist: any) => {
+        if (checklist.id === checklistId) {
+          return {
+            ...checklist,
+            checklistItems: [
+              ...(checklist.checklistItems || []),
+              response.data,
+            ],
+          };
+        }
+        return checklist;
       });
+
+      updateCard({ ...card, checklists: updatedChecklists });
 
       setInputValue("");
       setActiveChecklistId(null);
@@ -176,57 +161,53 @@ export function CardDetail() {
     newCheckedState: boolean,
   ) {
     try {
-      setCard((prevCard) => {
-        if (!prevCard) return prevCard;
+      if (!card) return;
 
-        const updatedChecklists = prevCard.checklists?.map((checklist: any) => {
-          // Thêm ( || [] ) để tránh lỗi văng app nếu checklist rỗng
-          const updatedItems = (checklist.checklistItems || []).map(
-            (item: any) => {
-              if (item.id === checklistItemId) {
-                return { ...item, completed: newCheckedState }; // Dùng luôn state mới
-              }
-              return item;
-            },
-          );
+      const updatedChecklists = card.checklists?.map((checklist: any) => {
+        // Thêm ( || [] ) để tránh lỗi văng app nếu checklist rỗng
+        const updatedItems = (checklist.checklistItems || []).map(
+          (item: any) => {
+            if (item.id === checklistItemId) {
+              return { ...item, completed: newCheckedState }; // Dùng luôn state mới
+            }
+            return item;
+          },
+        );
 
-          return {
-            ...checklist,
-            checklistItems: updatedItems,
-            completedCount: updatedItems.filter((i: any) => i.completed).length,
-          };
-        });
-
-        return { ...prevCard, checklists: updatedChecklists };
+        return {
+          ...checklist,
+          checklistItems: updatedItems,
+          completedCount: updatedItems.filter((i: any) => i.completed).length,
+        };
       });
+
+      updateCard({ ...card, checklists: updatedChecklists });
 
       await apiClient.patch(`/checklist-items/${checklistItemId}`, {
         completed: newCheckedState,
       });
     } catch (error) {
       console.error("Error updating checklist item:", error);
-      // Lưu ý: Nếu API lỗi, bạn có thể thiết kế thêm logic để setCard lùi lại trạng thái cũ
     }
   }
 
   async function handleDeleteChecklist(checklistId: string) {
+    if (!card) return;
     const previousCard = { ...card };
     setConfirmDeleteChecklistId(true);
 
-    setCard((prevCard) => {
-      if (!prevCard) return prevCard;
-      return {
-        ...prevCard,
-        checklists: prevCard.checklists?.filter((c) => c.id !== checklistId),
-      };
-    });
+    const updatedCard = {
+      ...card,
+      checklists: card.checklists?.filter((c) => c.id !== checklistId),
+    };
+    updateCard(updatedCard);
 
     try {
       await apiClient.delete(`/checklists/${checklistId}`);
       console.log("Deleted checklist successfully");
     } catch (error) {
       console.error("Error deleting checklist:", error);
-      setCard(previousCard as Card);
+      updateCard(previousCard);
       alert("Xóa thất bại, vui lòng thử lại!");
     }
   }
@@ -273,9 +254,9 @@ export function CardDetail() {
                 />
               </div>
               <div className="flex items-center flex-wrap pr-4 gap-2">
-                {card.members?.length > 0 ? (
+                {card.cardMembers?.length > 0 ? (
                   <AvatarGroup className="grayscale">
-                    {card.members.map((member, index) => (
+                    {card.cardMembers.map((member, index) => (
                       <Avatar key={index}>
                         <AvatarImage
                           src={member.userAvatar}
@@ -286,14 +267,14 @@ export function CardDetail() {
                     ))}
                     <AvatarGroupCount>
                       {/* <AddMember
-                        membersCard={card.members}
+                        membersCard={card.cardMembers}
                         onUpdateMembers={handleUpdateMembers}
                       /> */}
                     </AvatarGroupCount>
                   </AvatarGroup>
                 ) : (
                   // <AddMember
-                  //   membersCard={card.members}
+                  //   membersCard={card.cardMembers}
                   //   onUpdateMembers={handleUpdateMembers}
                   // />
                   <div className="text-sm text-muted-foreground">
