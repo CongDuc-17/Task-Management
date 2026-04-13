@@ -75,7 +75,7 @@ export function Board() {
       const cardsByList = await Promise.all(
         targetListIds.map(async (listId) => {
           const response = await apiClient.get(`/lists/${listId}/cards`);
-          console.log(`Fetched cards for list ${listId}:`, response);
+
           const payload = (response as { data?: unknown }).data ?? response;
           const listCards = Array.isArray(payload) ? payload : [];
           return listCards.map((card: any) => ({ ...card, listId }));
@@ -476,12 +476,6 @@ export function Board() {
                                     )}
                                 </div>
                               </div>
-
-                              {/* {task.description && (
-                                <KanbanBoardCardDescription>
-                                  {task.description}
-                                </KanbanBoardCardDescription>
-                              )} */}
                             </KanbanBoardCard>
                           </KanbanBoardColumnListItem>
                         ))}

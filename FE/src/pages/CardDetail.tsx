@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
-import { Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { AddChecklist } from "@/components/cards/AddChecklist";
 import { AddMember } from "@/components/cards/AddMember";
 import { AddLabel } from "@/components/cards/AddLabel";
@@ -65,6 +65,8 @@ export function CardDetail() {
     state.cards.find((c) => c.id === cardId),
   );
 
+  console.log("Card from store in CardDetail:", card);
+
   useEffect(() => {
     fetchLabelsBoard();
   }, [boardId]);
@@ -91,22 +93,6 @@ export function CardDetail() {
     } finally {
       setLoading(false);
     }
-  };
-
-  console.log("cards from store in CardDetail:", cards);
-  const handleUpdateMembers = (action: "add" | "remove", memberObj: any) => {
-    if (!card) return;
-    let updatedMembers = card.cardMembers ? [...card.cardMembers] : [];
-
-    if (action === "add") {
-      updatedMembers.push(memberObj);
-    } else if (action === "remove") {
-      updatedMembers = updatedMembers.filter(
-        (m: any) =>
-          (m.userId || m.user?.id) !== (memberObj.userId || memberObj.user?.id),
-      );
-    }
-    updateCard({ ...card, cardMembers: updatedMembers });
   };
 
   const handleUpdateChecklist = (
@@ -254,32 +240,35 @@ export function CardDetail() {
                 />
               </div>
               <div className="flex items-center flex-wrap pr-4 gap-2">
-                {card.cardMembers?.length > 0 ? (
+                {card.cardMembers && card.cardMembers?.length > 0 ? (
                   <AvatarGroup className="grayscale">
-                    {card.cardMembers.map((member, index) => (
-                      <Avatar key={index}>
-                        <AvatarImage
-                          src={member.userAvatar}
-                          alt={member.userAvatar}
-                        />
-                        <AvatarFallback>{member.userName}</AvatarFallback>
-                      </Avatar>
-                    ))}
+                    {/* 2. Map over the members INSIDE the AvatarGroup */}
+                    {card.cardMembers.map((cardMember: any) => {
+                      const memberDetail = cardMember?.user;
+                      if (!memberDetail) return null;
+
+                      return (
+                        // 3. Always provide a unique 'key' when rendering elements in a list
+                        <Avatar key={memberDetail.id}>
+                          <AvatarImage
+                            // Use the actual user's avatar URL from your data
+                            src={memberDetail.avatar || ""}
+                            alt={`@${memberDetail.name}`}
+                          />
+                          <AvatarFallback>
+                            {memberDetail.name
+                              ? memberDetail.name.charAt(0).toUpperCase()
+                              : "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                      );
+                    })}
                     <AvatarGroupCount>
-                      {/* <AddMember
-                        membersCard={card.cardMembers}
-                        onUpdateMembers={handleUpdateMembers}
-                      /> */}
+                      <AddMember membersCard={card?.cardMembers ?? []} />
                     </AvatarGroupCount>
                   </AvatarGroup>
                 ) : (
-                  // <AddMember
-                  //   membersCard={card.cardMembers}
-                  //   onUpdateMembers={handleUpdateMembers}
-                  // />
-                  <div className="text-sm text-muted-foreground">
-                    No members assigned to this card
-                  </div>
+                  <AddMember membersCard={card?.cardMembers ?? []} />
                 )}
 
                 <AddLabel
