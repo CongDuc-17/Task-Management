@@ -31,8 +31,6 @@ export function AddMember({
   const cardId = useParams().cardId as string;
   const { board, fetchBoard } = useBoards();
 
-  console.log("Members of card", membersCard);
-
   // Lấy list userId đã có trên card
   const cardMemberIds = membersCard.map(
     (member) => member.userId || member.user?.id,

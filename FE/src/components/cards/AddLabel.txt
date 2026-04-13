@@ -9,39 +9,26 @@ import {
 import { Card, CardTitle } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Plus, SquarePen } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
-import { useCardsStore } from "@/stores/cards.store";
 
 export function AddLabel({
   labelsBoard,
+  labelsCard,
   fetchLabelsBoard,
+  onUpdateLabels,
 }: {
   labelsBoard: any[];
+  labelsCard: string[];
   fetchLabelsBoard: () => void;
+  onUpdateLabels: (action: "add" | "remove", labelObj: any) => void;
 }) {
-  const { boardId, cardId } = useParams() as {
-    boardId: string;
-    cardId: string;
-  };
+  const boardId = useParams().boardId as string;
 
-  const card = useCardsStore((state) =>
-    state.cards.find((c) => c.id === cardId),
-  );
+  const { cardId } = useParams();
 
-  const addLabel = useCardsStore((state) => state.addLabel);
-  const removeLabel = useCardsStore((state) => state.removeLabel);
-
-  const currentCardLabels = card?.cardLabels || []; //lay
-
-  const selectedLabelIds = currentCardLabels.map(
-    (label: any) => label.labelId || label.label?.id || label.id,
-  );
-
-  const [pendingLabelIds, setPendingLabelIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [labelInputPopoverOpen, setLabelInputPopoverOpen] = useState(false);
 
@@ -62,99 +49,75 @@ export function AddLabel({
     "#f97316",
   ];
 
-  // 3. Logic xử lý Tick/Bỏ tick checkbox
+  // Kiểm tra label card nào có thì tick chọn
+  useEffect(() => {
+    if (labelsCard && labelsBoard) {
+      const labelCardIds = labelsCard.map((label) => label.id);
+      const labelBoardIds = labelsBoard.map((label) => label.id);
+      const selected = labelBoardIds.filter((id) => labelCardIds.includes(id));
+      setSelectedLabels(selected);
+    }
+  }, [labelsCard, labelsBoard]);
+
   const handleLabelToggle = async (labelColor: string, labelId: string) => {
+    const isSelected = selectedLabels.includes(labelId);
+
+    const fullLabelObj = labelsBoard.find((l) => l.id === labelId);
+
+    setSelectedLabels((prev) =>
+      isSelected ? prev.filter((id) => id !== labelId) : [...prev, labelId],
+    );
+
     try {
-      if (!cardId) {
-        console.error("⚠️ cardId is undefined!");
-        return;
-      }
-
-      if (!card) {
-        console.error("⚠️ card not found in store!");
-        return;
-      }
-
-      // Kiểm tra xem label này đã được tick hay chưa
-      const isSelected = selectedLabelIds.includes(labelId);
-      const fullLabelObj = labelsBoard.find((l) => l.id === labelId);
-
-      if (!fullLabelObj) {
-        console.error("⚠️ fullLabelObj not found in labelsBoard!");
-        return;
-      }
-
       if (isSelected) {
-        // Optimistic Update: Xóa khỏi UI ngay lập tức
-        console.log("❌ Removing label from store...");
-        removeLabel(cardId, labelId);
-        await apiClient.delete(`/cards/${cardId}/labels/${labelId}`);
+        const response = await apiClient.delete(
+          `/cards/${cardId}/labels/${labelId}`,
+        );
+        onUpdateLabels("remove", fullLabelObj);
       } else {
-        addLabel(cardId, {
-          labelId: fullLabelObj.id, // ← thêm field này
-          label: {
-            // ← wrap vào .label để đồng nhất với API
-            id: fullLabelObj.id,
-            name: fullLabelObj.name,
-            color: fullLabelObj.color,
-          },
+        const response = await apiClient.post(`/cards/${cardId}/labels`, {
+          labelId: labelId,
         });
-        await apiClient.post(`/cards/${cardId}/labels`, { labelId });
+        onUpdateLabels("add", fullLabelObj);
       }
-      // Defensive check
     } catch (error) {
-      console.error("❗ Error toggling label:", error);
-      // // Rollback nếu API lỗi
-      // if (isSelected) {
-      //   console.log("🔄 Rolling back - re-adding label");
-      //   addLabel(cardId, fullLabelObj);
-      // } else {
-      //   console.log("🔄 Rolling back - removing label");
-      //   removeLabel(cardId, labelId);
-      // }
-    } finally {
-      setPendingLabelIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(labelId);
-        return newSet;
-      });
+      console.error("Error toggling label:", error);
     }
   };
+
+  async function handleAddLabel(label: {
+    id: string;
+    name: string;
+    color: string;
+  }) {
+    handleLabelToggle(label.color, label.id);
+  }
 
   const handleSaveLabel = async () => {
     if (!labelName.trim() || !selectedColor) return;
 
     try {
       if (editingLabel) {
-        // Cập nhật label cũ
         await apiClient.patch(`/labels/${editingLabel.id}`, {
           name: labelName,
           color: selectedColor,
         });
       } else {
-        // Tạo label mới trên Board
         const response = await apiClient.post(`/boards/${boardId}/labels`, {
           name: labelName,
           color: selectedColor,
         });
 
-        // Gắn label mới vào Card
         await apiClient.post(`/cards/${cardId}/labels`, {
           labelId: response.data.id,
         });
 
-        // Cập nhật UI ngay lập tức
-        addLabel(cardId, {
-          id: response.data.id,
-          name: response.data.name,
-          color: response.data.color,
-        });
+        onUpdateLabels("add", response.data);
       }
 
-      // Làm mới danh sách label của Board
       fetchLabelsBoard();
 
-      // Reset Form Popover
+      // Reset popover
       setLabelInputPopoverOpen(false);
       setLabelName("");
       setSelectedColor("");
@@ -180,92 +143,82 @@ export function AddLabel({
       open={popoverOpen}
       onOpenChange={(open) => {
         // Không đóng popover cha nếu popover con đang mở
-        if (labelInputPopoverOpen) return;
+        if (labelInputPopoverOpen) {
+          return;
+        }
         setPopoverOpen(open);
       }}
     >
-      <div className="flex items-center flex-wrap gap-1 mb-2">
-        {/* Render danh sách label đã gắn lên Card */}
-        {currentCardLabels.map((label: any) => {
-          // Xử lý an toàn đề phòng backend trả về lồng object (label.label.xxx)
-          const labelDetail = label.name ? label : label.label;
-          if (!labelDetail) return null;
-
-          return (
-            <div key={labelDetail.id} className="flex items-center gap-2">
-              <Card
-                className={`p-4 h-8 flex items-center justify-center cursor-pointer`}
-                style={{ backgroundColor: labelDetail.color }}
-              >
-                <CardTitle className="text-xs text-white">
-                  {labelDetail.name}
-                </CardTitle>
-              </Card>
-            </div>
-          );
-        })}
+      <div className="flex items-center flex-wrap gap-0.5">
+        {labelsCard.map((label, index) => (
+          <div key={index} className="flex items-center gap-2 ">
+            <Card
+              key={index}
+              className={`p-4  h-10  flex  items-start justify-center gap-2 cursor-pointer`}
+              style={{ backgroundColor: label.color }}
+            >
+              <CardTitle className="text-sm  text-white">
+                {label.name}
+              </CardTitle>
+            </Card>
+          </div>
+        ))}
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8">
-            <Plus size={16} />
+          <Button variant="outline">
+            <Plus />
           </Button>
         </PopoverTrigger>
       </div>
-
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-80 ">
         <div className="grid gap-4 relative">
           <div className="space-y-2">
             <h4 className="leading-none font-medium">Add Label</h4>
             <p className="text-sm text-muted-foreground">
-              Select labels for your card.
+              Set the dimensions for the layer.
             </p>
           </div>
           <div className="grid gap-2">
             <div className="grid gap-2">
-              <Input
-                id="label-search"
-                placeholder="Search labels..."
-                type="text"
-              />
+              <Label>Search for a label to add</Label>
+              <Input id="label-search" name="label-search" type="text" />
             </div>
 
             {labelsBoard.length > 0 ? (
               <div>
-                <div className="grid gap-2 max-h-56 overflow-y-auto pr-1">
-                  {labelsBoard.map((label) => (
-                    <div key={label.id} className="flex items-center gap-2">
+                <div className="grid grid-cols gap-2 max-h-56 overflow-y-auto">
+                  {labelsBoard.map((label, index) => (
+                    <div key={index} className="flex items-center gap-2 ">
                       <Checkbox
-                        id={`label-checkbox-${label.id}`}
-                        // Tự động Tick nếu ID của label này nằm trong selectedLabelIds
-                        checked={selectedLabelIds.includes(label.id)}
+                        id={`label-checkbox-${index}`}
+                        name={`label-checkbox-${index}`}
+                        checked={selectedLabels.includes(label.id)}
                         onCheckedChange={() =>
                           handleLabelToggle(label.color, label.id)
                         }
-                        disabled={pendingLabelIds.has(label.id)}
                       />
                       <Card
-                        className={`p-3 w-full flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80`}
+                        key={index}
+                        className={`p-4 w-full h-10  flex  items-start justify-center gap-2 cursor-pointer`}
                         style={{ backgroundColor: label.color }}
-                        onClick={() => handleLabelToggle(label.color, label.id)}
+                        onClick={() => handleAddLabel(label)}
                       >
-                        <CardTitle className="text-sm text-white m-0">
+                        <CardTitle className="text-sm  text-white">
                           {label.name}
                         </CardTitle>
                       </Card>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleUpdateLabel(label)}
-                      >
-                        <SquarePen size={16} />
-                      </Button>
+                      <SquarePen onClick={() => handleUpdateLabel(label)} />
                     </div>
                   ))}
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end gap-2 pt-4">
                   <Button
-                    className="w-full"
+                    variant="outline"
+                    onClick={() => setPopoverOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
                     onClick={() => {
                       setEditingLabel(null);
                       setLabelInputPopoverOpen(true);
@@ -278,9 +231,11 @@ export function AddLabel({
                 </div>
               </div>
             ) : (
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setPopoverOpen(false)}>
+                  Cancel
+                </Button>
                 <Button
-                  className="w-full"
                   onClick={() => {
                     setEditingLabel(null);
                     setLabelInputPopoverOpen(true);
@@ -294,7 +249,7 @@ export function AddLabel({
             )}
           </div>
 
-          {/* Popover con: Tạo / Sửa Label */}
+          {/* Label Input Popover */}
           <Popover
             open={labelInputPopoverOpen}
             onOpenChange={(open) => {
@@ -312,26 +267,43 @@ export function AddLabel({
             <PopoverContent
               className="w-64"
               side="right"
-              align="start"
+              align="center"
               sideOffset={17}
             >
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <h4 className="leading-none font-medium">
-                    {editingLabel ? "Edit label" : "Create new label"}
-                  </h4>
+                  {editingLabel ? (
+                    <div>
+                      <h4 className="leading-none font-medium">
+                        Edit label "{editingLabel.name}"
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a color and enter a new name
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="leading-none font-medium">
+                        Create new label
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a color and enter a name
+                      </p>
+                    </div>
+                  )}
                 </div>
 
+                {/* Hiển thị các màu sắc */}
                 <div>
-                  <Label className="text-sm mb-2 block">Select color</Label>
-                  <div className="grid grid-cols-5 gap-2">
+                  <Label className="text-sm mb-2">Select color</Label>
+                  <div className="grid grid-cols-6 gap-2">
                     {DEFAULT_LABEL_COLORS.map((color) => (
                       <div
                         key={color}
                         className={`w-8 h-8 rounded cursor-pointer border-2 transition-all ${
                           selectedColor === color
                             ? "border-gray-800 scale-110"
-                            : "border-transparent hover:scale-105"
+                            : "border-gray-300"
                         }`}
                         style={{ backgroundColor: color }}
                         onClick={() => setSelectedColor(color)}
@@ -347,16 +319,20 @@ export function AddLabel({
                     placeholder="Enter label name..."
                     value={labelName}
                     onChange={(e) => setLabelName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveLabel()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveLabel();
+                      }
+                    }}
                   />
                 </div>
 
                 {selectedColor && (
                   <div
-                    className="h-8 rounded flex items-center justify-center text-white text-xs font-medium"
+                    className="h-10 rounded flex items-center justify-center text-white font-medium"
                     style={{ backgroundColor: selectedColor }}
                   >
-                    Preview: {labelName || "Empty"}
+                    Preview
                   </div>
                 )}
 
