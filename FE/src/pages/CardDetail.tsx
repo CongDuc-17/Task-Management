@@ -32,6 +32,7 @@ import { useBoards } from "@/hooks/useBoards";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCardsStore } from "@/stores/cards.store";
 interface Card {
   id: string;
   title: string;
@@ -40,15 +41,16 @@ interface Card {
   position: number;
   createdAt?: string;
   updatedAt?: string;
-  members: string[];
-  labels?: string[];
-  checklists?: string[];
+  cardMembers: any[];
+  cardLabels?: any[];
+  checklists?: any[];
 }
 
 export function CardDetail() {
   const { cardId, boardId } = useParams();
   const navigate = useNavigate();
-  const [card, setCard] = useState<Card | null>(null);
+  // const [card, setCard] = useState<Card | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [newDescription, setNewDescription] = useState("");
   const [newComments, setComments] = useState("");
@@ -60,6 +62,10 @@ export function CardDetail() {
     useState(false);
 
   const { labelsBoard, fetchLabelsBoard } = useBoards();
+  const { cards, setCurrentCardId, setCards, updateCard } = useCardsStore();
+  const card = useCardsStore((state) =>
+    state.cards.find((c) => c.id === cardId),
+  );
 
   useEffect(() => {
     fetchLabelsBoard();
@@ -71,7 +77,18 @@ export function CardDetail() {
       const response = await apiClient.get(
         `/cards/${cardId}?include=members,labels,checklists`,
       );
-      setCard(response.data);
+      setCurrentCardId(cardId || null);
+
+      // Merge card mới vào mảy cards hiện có (không replace hết)
+      const existingCard = cards.find((c) => c.id === cardId);
+      if (existingCard) {
+        // Card đã có → update
+        updateCard(response.data);
+      } else {
+        // Card chưa có → thêm vào
+        setCards([...cards, response.data]);
+      }
+
       console.log("Fetched card:", response.data);
     } catch (error) {
       console.error("Error fetching card:", error);
@@ -80,6 +97,7 @@ export function CardDetail() {
     }
   };
 
+  console.log("cards from store in CardDetail:", cards);
   const handleUpdateMembers = (action: "add" | "remove", memberObj: any) => {
     setCard((prevCard) => {
       if (!prevCard) return prevCard;
@@ -96,22 +114,6 @@ export function CardDetail() {
         );
       }
       return { ...prevCard, members: updatedMembers };
-    });
-  };
-
-  const handleUpdateLabels = (action: "add" | "remove", labelObj: any) => {
-    setCard((prevCard) => {
-      if (!prevCard) return prevCard;
-
-      let updatedLabels = prevCard.labels ? [...prevCard.labels] : [];
-
-      if (action === "add") {
-        updatedLabels.push(labelObj);
-      } else if (action === "remove") {
-        updatedLabels = updatedLabels.filter((l: any) => l.id !== labelObj.id);
-      }
-
-      return { ...prevCard, labels: updatedLabels };
     });
   };
 
@@ -283,24 +285,25 @@ export function CardDetail() {
                       </Avatar>
                     ))}
                     <AvatarGroupCount>
-                      <AddMember
+                      {/* <AddMember
                         membersCard={card.members}
                         onUpdateMembers={handleUpdateMembers}
-                      />
+                      /> */}
                     </AvatarGroupCount>
                   </AvatarGroup>
                 ) : (
-                  <AddMember
-                    membersCard={card.members}
-                    onUpdateMembers={handleUpdateMembers}
-                  />
+                  // <AddMember
+                  //   membersCard={card.members}
+                  //   onUpdateMembers={handleUpdateMembers}
+                  // />
+                  <div className="text-sm text-muted-foreground">
+                    No members assigned to this card
+                  </div>
                 )}
 
                 <AddLabel
                   labelsBoard={labelsBoard}
-                  labelsCard={card.labels}
                   fetchLabelsBoard={fetchLabelsBoard}
-                  onUpdateLabels={handleUpdateLabels}
                 />
 
                 <AddChecklist onUpdateChecklist={handleUpdateChecklist} />

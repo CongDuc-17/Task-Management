@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -19,13 +19,24 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/SideBar";
 import { useLists } from "@/hooks/useLists";
 import { useParams } from "react-router-dom";
-import { useCards } from "@/hooks/useCards";
+import { apiClient } from "@/lib/apiClient";
 import { CreateList } from "@/components/lists/CreateList";
 import { CreateCard } from "@/components/cards/CreateCard";
 import { HeaderBoard } from "@/components/boards/HeaderBoard";
 import { useBoards } from "@/hooks/useBoards";
 import { axiosClient } from "@/lib/apiClient";
 import { Outlet } from "react-router-dom";
+
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { MessageSquareText } from "lucide-react";
+import { useCardsStore } from "@/stores/cards.store";
 type List = {
   id: string;
   name: string;
@@ -38,6 +49,10 @@ type Card = {
   description?: string;
   listId: string;
   position: number;
+  cardLabels?: any[];
+  cardMembers?: any[];
+  checklists?: any[];
+  commentsCount?: number;
 };
 
 export function Board() {
@@ -46,7 +61,58 @@ export function Board() {
   const { board, fetchBoard } = useBoards();
   const { lists, createList, loading: listsLoading } = useLists(boardId);
   const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
-  const { cards, createCard } = useCards(listIds);
+
+  // Lấy cards từ Zustand Store
+  const { cards, setCards } = useCardsStore();
+  console.log("Cards from store:", cards);
+  // Fetch cards từ API và lưu vào store
+  const fetchCardsForBoard = async (targetListIds: string[]) => {
+    if (!targetListIds.length) {
+      setCards([]);
+      return;
+    }
+
+    try {
+      const cardsByList = await Promise.all(
+        targetListIds.map(async (listId) => {
+          const response = await apiClient.get(`/lists/${listId}/cards`);
+          const payload = (response as { data?: unknown }).data ?? response;
+          const listCards = Array.isArray(payload) ? payload : [];
+          return listCards.map((card: any) => ({ ...card, listId }));
+        }),
+      );
+
+      setCards(cardsByList.flat());
+      console.log("📦 Fetched cards for board:", cardsByList.flat());
+    } catch (error) {
+      console.error("❌ Failed to fetch cards:", error);
+    }
+  };
+
+  // Fetch cards khi listIds thay đổi
+  useEffect(() => {
+    if (listIds.length) {
+      fetchCardsForBoard(listIds);
+    }
+  }, [listIds]);
+
+  // Create card và lưu vào store
+  const createCard = async (listId: string, title: string) => {
+    try {
+      const response = await apiClient.post(`/lists/${listId}/cards`, {
+        title,
+      });
+
+      const newCard = response.data ?? response;
+      if (newCard && typeof newCard === "object" && "id" in newCard) {
+        // Thêm card mới vào store
+        setCards([...cards, { ...newCard, listId }]);
+        console.log("✅ Card created and added to store:", newCard);
+      }
+    } catch (error) {
+      console.error("❌ Failed to create card:", error);
+    }
+  };
 
   const [columnOrder, setColumnOrder] = useState<string[] | null>(null);
   const baseColumns = useMemo<List[]>(
@@ -83,16 +149,7 @@ export function Board() {
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
-  const defaultTasks = useMemo<Card[]>(
-    () =>
-      cards.map((card) => ({
-        id: card.id,
-        title: card.title,
-        listId: card.listId,
-        position: card.position,
-      })),
-    [cards],
-  );
+  const defaultTasks = useMemo<Card[]>(() => cards, [cards]);
 
   const [tasks, setTasks] = useState<Card[]>([]);
   const tasksToRender = tasks.length ? tasks : defaultTasks;
@@ -191,7 +248,7 @@ export function Board() {
    * XỬ LÝ KÉO THẢ CARD
    */
   // Khi thả vào cột hoặc vùng trống (không phải thả vào card cụ thể)
-  function handleDropOverColumn(columnId: string, data: string) {
+  async function handleDropOverColumn(columnId: string, data: string) {
     try {
       console.log("Drop over column:", columnId, "with data:", data);
       const taskData = JSON.parse(data) as Card;
@@ -205,13 +262,13 @@ export function Board() {
       );
       setTasks(sourceTasks);
       try {
-        const response = axiosClient.patch(`/cards/${taskData.id}/move`, {
+        await axiosClient.patch(`/cards/${taskData.id}/move`, {
           targetListId: columnId,
         });
-        console.log("Update card position response:", response);
+        console.log("✅ Update card position response");
       } catch (error) {
         setTasks(tasks);
-        console.error("Error updating card position:", error);
+        console.error("❌ Error updating card position:", error);
       }
     } catch (error) {
       console.error("Error parsing task data:", error);
@@ -352,14 +409,79 @@ export function Board() {
                               }
                               className="relative"
                             >
+                              {task.cardLabels &&
+                                task.cardLabels.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {task.cardLabels?.map((cardLabel: any) => {
+                                      const labelDetail = cardLabel?.label;
+                                      if (!labelDetail) return null;
+
+                                      return (
+                                        <span
+                                          key={labelDetail.id}
+                                          className="inline-block px-2 text-[10px] font-semibold text-white rounded-full"
+                                          style={{
+                                            backgroundColor: labelDetail.color,
+                                          }}
+                                        >
+                                          {labelDetail.name}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
                               <KanbanBoardCardTitle>
                                 {task.title}
                               </KanbanBoardCardTitle>
-                              {task.description && (
+
+                              <div className="flex justify-between items-center gap-2">
+                                <div className="flex gap-2 items-center text-xs">
+                                  <MessageSquareText className="w-4" />
+                                  {task.commentsCount || 0}
+                                </div>
+
+                                <div>
+                                  {task.cardMembers &&
+                                    task.cardMembers.length > 0 && (
+                                      <AvatarGroup className="grayscale">
+                                        {/* 2. Map over the members INSIDE the AvatarGroup */}
+                                        {task.cardMembers.map(
+                                          (cardMember: any) => {
+                                            const memberDetail =
+                                              cardMember?.user;
+                                            if (!memberDetail) return null;
+
+                                            return (
+                                              // 3. Always provide a unique 'key' when rendering elements in a list
+                                              <Avatar key={memberDetail.id}>
+                                                <AvatarImage
+                                                  // Use the actual user's avatar URL from your data
+                                                  src={
+                                                    memberDetail.avatar || ""
+                                                  }
+                                                  alt={`@${memberDetail.name}`}
+                                                />
+                                                <AvatarFallback>
+                                                  {memberDetail.name
+                                                    ? memberDetail.name
+                                                        .charAt(0)
+                                                        .toUpperCase()
+                                                    : "?"}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                            );
+                                          },
+                                        )}
+                                      </AvatarGroup>
+                                    )}
+                                </div>
+                              </div>
+
+                              {/* {task.description && (
                                 <KanbanBoardCardDescription>
                                   {task.description}
                                 </KanbanBoardCardDescription>
-                              )}
+                              )} */}
                             </KanbanBoardCard>
                           </KanbanBoardColumnListItem>
                         ))}
