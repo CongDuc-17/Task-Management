@@ -34,23 +34,21 @@ import { Card } from "../ui/card";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useParams } from "react-router";
+import { X } from "lucide-react";
 
-export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[]; fetchBoard: () => Promise<void> }) {
+export function MembersBoard({
+  boardMembers,
+  fetchBoard,
+}: {
+  boardMembers?: any[];
+  fetchBoard: () => Promise<void>;
+}) {
   const { boardId } = useParams() as { boardId: string };
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [roles, setRoles] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
-
-  // helper function to get initials
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -69,7 +67,7 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
   async function fetchRoles() {
     try {
       const response = await apiClient.get("/roles");
-      console.log("Roles response:", response.data);
+
       const projectRoles = response.data.filter((role: any) =>
         role.name.startsWith("BOARD_"),
       );
@@ -90,7 +88,6 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
         roleId: newRoleId,
       });
       setMemberRoles((prev) => ({ ...prev, [userId]: newRoleId }));
-      console.log("Role change response:", response);
     } catch (error) {
       console.error("Error changing role:", error);
     }
@@ -123,6 +120,18 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
     }
   }
 
+  async function handleRemoveMember(userId: string) {
+    try {
+      await apiClient.delete(`/boards/${boardId}/members`, {
+        data: { userId },
+      });
+      await fetchBoard();
+    } catch (error) {
+      console.error("Error removing member:", error);
+      alert("Error removing member");
+    }
+  }
+
   return (
     <Dialog>
       <form>
@@ -137,7 +146,7 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
                       alt={member.user.name}
                     />
                     <AvatarFallback>
-                      {getInitials(member.user.name)}
+                      {member.user.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 ))}
@@ -209,7 +218,7 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
                       alt={member.user.name}
                     />
                     <AvatarFallback>
-                      {getInitials(member.user.name)}
+                      {member.user.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-4">
@@ -220,7 +229,7 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
                   </div>
                 </div>
 
-                <div>
+                <div className="flex items-center gap-2">
                   <Select
                     value={memberRoles[member.user.id] || member.role.id}
                     onValueChange={(newRoleId) =>
@@ -228,7 +237,7 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
                     }
                     disabled={member.role.name === "BOARD_ADMIN"}
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-fit">
                       <SelectValue
                         placeholder={member.role.name.replace("BOARD_", "")}
                       />
@@ -243,6 +252,10 @@ export function MembersBoard({ boardMembers, fetchBoard }: { boardMembers?: any[
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  <X
+                    className="cursor-pointer text-gray-400 hover:text-red-500 transition"
+                    onClick={() => handleRemoveMember(member.user.id)}
+                  />
                 </div>
               </Card>
             ))}

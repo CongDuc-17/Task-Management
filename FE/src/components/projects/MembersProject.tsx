@@ -33,27 +33,22 @@ import { Input } from "../ui/input";
 import { Card } from "../ui/card";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
-import { useParams } from "react-router";
-import { useProjects } from "@/hooks/useProjects";
 
-export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
-  const { projectId } = useParams() as { projectId: string };
+import { X } from "lucide-react";
+import { useProjectsStore } from "@/stores/projects.store";
+
+export function MembersProject({ projectId }: { projectId: string }) {
+  const projectMembers = useProjectsStore(
+    (state) => state.projects.find((p) => p.id === projectId)?.members,
+  );
+  const updateProjectMembers = useProjectsStore(
+    (state) => state.updateProjectMembers,
+  );
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [roles, setRoles] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
-
-  const { fetchProjects } = useProjects();
-
-  // helper function to get initials
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -121,11 +116,29 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
 
       setEmail("");
       setSelectedRoleId("");
-      await fetchProjects();
+
+      updateProjectMembers(projectId, response.data?.members || []);
+      // Cập nhật store mà không re-render parent
+
       console.log("Invitation response:", response);
     } catch (error) {
       console.error("Error inviting member:", error);
       alert("Error inviting member");
+    }
+  }
+
+  async function handleRemoveMember(userId: string) {
+    try {
+      await apiClient.delete(`/projects/${projectId}/members`, {
+        data: { userId },
+      });
+      // Cập nhật store mà không re-render parent
+      const updatedMembers =
+        projectMembers?.filter((m) => m.user.id !== userId) || [];
+      updateProjectMembers(projectId, updatedMembers);
+    } catch (error) {
+      console.error("Error removing member:", error);
+      alert("Error removing member");
     }
   }
 
@@ -143,7 +156,7 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
                       alt={member.user.name}
                     />
                     <AvatarFallback>
-                      {getInitials(member.user.name)}
+                      {member.user.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 ))}
@@ -217,7 +230,7 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
                       alt={member.user.name}
                     />
                     <AvatarFallback>
-                      {getInitials(member.user.name)}
+                      {member.user.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-4">
@@ -228,7 +241,7 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
                   </div>
                 </div>
 
-                <div>
+                <div className="flex items-center gap-2">
                   <Select
                     value={memberRoles[member.user.id] || member.role.id}
                     onValueChange={(newRoleId) =>
@@ -236,7 +249,7 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
                     }
                     disabled={member.role.name === "PROJECT_ADMIN"}
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-fit">
                       <SelectValue
                         placeholder={member.role.name.replace("PROJECT_", "")}
                       />
@@ -251,6 +264,10 @@ export function MembersProject({ projectMembers }: { projectMembers?: any[] }) {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  <X
+                    className="cursor-pointer text-gray-400 hover:text-red-500 transition"
+                    onClick={() => handleRemoveMember(member.user.id)}
+                  />
                 </div>
               </Card>
             ))}
