@@ -95,23 +95,6 @@ export function CardDetail() {
     }
   };
 
-  const handleUpdateChecklist = (
-    action: "add" | "remove",
-    checklistObj: any,
-  ) => {
-    if (!card) return;
-    let updatedChecklists = card.checklists ? [...card.checklists] : [];
-
-    if (action === "add") {
-      updatedChecklists.push(checklistObj);
-    } else if (action === "remove") {
-      updatedChecklists = updatedChecklists.filter(
-        (c: any) => c.id !== checklistObj.id,
-      );
-    }
-    updateCard({ ...card, checklists: updatedChecklists });
-  };
-
   async function handleAddChecklistItem(checklistId: string) {
     try {
       if (!card) return;
@@ -190,9 +173,7 @@ export function CardDetail() {
 
     try {
       await apiClient.delete(`/checklists/${checklistId}`);
-      console.log("Deleted checklist successfully");
     } catch (error) {
-      console.error("Error deleting checklist:", error);
       updateCard(previousCard);
       alert("Xóa thất bại, vui lòng thử lại!");
     }
@@ -210,7 +191,7 @@ export function CardDetail() {
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="w-9/12 max-w-none! left-1/2 !top-0 !translate-y-0 transform -translate-x-1/2 mt-16 max-h-[85vh] bg-background rounded-lg shadow-md p-6 ">
+      <DialogContent className="w-10/12 max-w-none! left-1/2 !top-0 !translate-y-0 transform -translate-x-1/2 mt-10 max-h-[90vh] bg-background rounded-lg shadow-md p-6 ">
         {card && (
           <DialogHeader className="flex  justify-between">
             <DialogTitle className="text-xl font-bold">
@@ -276,11 +257,11 @@ export function CardDetail() {
                   fetchLabelsBoard={fetchLabelsBoard}
                 />
 
-                <AddChecklist onUpdateChecklist={handleUpdateChecklist} />
+                <AddChecklist />
               </div>
 
               {/* checklist */}
-              <div className="overflow-y-auto max-h-[50vh] flex flex-col gap-4 ">
+              <div className="overflow-y-auto max-h-[45vh] flex flex-col gap-4 ">
                 {card.checklists?.map((checklist, index) => {
                   const totalItems = checklist.checklistItems?.length || 0;
                   const completedItems =

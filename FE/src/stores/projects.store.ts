@@ -32,7 +32,8 @@ interface ProjectsStore {
   createProject: (project: Project) => void;
   updateProject: (project: Project) => void;
   deleteProject: (projectId: string) => void;
-
+  updateProjectName: (projectId: string, newName: string) => void;
+  updateProjectMembers: (projectId: string, members: Member[]) => void;
   createBoardToProject: (projectId: string, board: Board) => void;
 
   updateMembersCount: (projectId: string, count: number) => void;
@@ -71,6 +72,20 @@ export const useProjectsStore = create<ProjectsStore>((set) => ({
     set((state) => ({
       projects: state.projects.map((p) =>
         p.id === projectId ? { ...p, membersCount: count } : p,
+      ),
+    })),
+
+  updateProjectName: (projectId, newName) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, name: newName } : p,
+      ),
+    })),
+
+  updateProjectMembers: (projectId, members) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, members } : p,
       ),
     })),
 

@@ -180,7 +180,7 @@ export function AddLabel({
         setPopoverOpen(open);
       }}
     >
-      <div className="flex items-center flex-wrap gap-1 mb-2">
+      <div className="flex items-center flex-wrap gap-1 ">
         {/* Render danh sách label đã gắn lên Card */}
         {currentCardLabels.map((label: any) => {
           // Xử lý an toàn đề phòng backend trả về lồng object (label.label.xxx)
@@ -228,7 +228,7 @@ export function AddLabel({
               <div>
                 <div className="grid gap-2 max-h-56 overflow-y-auto pr-1">
                   {labelsBoard.map((label) => (
-                    <div key={label.id} className="flex items-center gap-2">
+                    <div key={label.id} className="flex items-center  gap-2">
                       <Checkbox
                         id={`label-checkbox-${label.id}`}
                         // Tự động Tick nếu ID của label này nằm trong selectedLabelIds

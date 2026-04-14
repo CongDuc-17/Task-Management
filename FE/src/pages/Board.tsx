@@ -35,7 +35,8 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, SquareCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useCardsStore } from "@/stores/cards.store";
 type List = {
   id: string;
@@ -59,8 +60,12 @@ export function Board() {
   const boardId = useParams().boardId as string;
   const navigate = useNavigate();
   const { board, fetchBoard } = useBoards();
-  const { lists, createList, loading: listsLoading } = useLists(boardId);
-  //const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
+  const {
+    lists,
+    createList,
+    loading: listsLoading,
+    fetchLists,
+  } = useLists(boardId);
 
   // Lấy cards từ Zustand Store
   const { cards, setCards } = useCardsStore();
@@ -341,6 +346,34 @@ export function Board() {
     }
   }
 
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [editingColumnTitle, setEditingColumnTitle] = useState("");
+  const startEditingColumn = (column: List) => {
+    setEditingColumnId(column.id);
+    setEditingColumnTitle(column.name);
+  };
+
+  const handleSaveColumnName = async (columnId: string) => {
+    // Nếu rỗng thì thoát chế độ edit, không lưu
+    if (!editingColumnTitle.trim()) {
+      setEditingColumnId(null);
+      return;
+    }
+
+    try {
+      // 1. Gọi API update tên List (Sửa lại endpoint cho đúng với BE của bạn)
+      await apiClient.patch(`/lists/${columnId}/update`, {
+        name: editingColumnTitle,
+      });
+
+      fetchLists(boardId);
+    } catch (error) {
+      console.error("Lỗi khi đổi tên cột:", error);
+    } finally {
+      setEditingColumnId(null); // Tắt chế độ edit
+    }
+  };
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -377,108 +410,191 @@ export function Board() {
                   >
                     {/* Header cột với drag handle */}
                     <KanbanBoardColumnHeader
-                      draggable
+                      draggable={editingColumnId !== column.id}
                       onDragStart={(e) => handleColumnDragStart(e, column.id)}
                       onDragEnd={handleColumnDragEnd}
-                      className="cursor-move"
+                      className={
+                        editingColumnId !== column.id ? "cursor-move" : ""
+                      }
                     >
-                      <KanbanBoardColumnTitle
-                        columnId={column.id}
-                        className="pl-2"
-                      >
-                        {column.name}
-                      </KanbanBoardColumnTitle>
+                      {editingColumnId === column.id ? (
+                        <div className="w-full px-2">
+                          <Input
+                            value={editingColumnTitle}
+                            onChange={(e) =>
+                              setEditingColumnTitle(e.target.value)
+                            }
+                            onBlur={() => handleSaveColumnName(column.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSaveColumnName(column.id);
+                              } else if (e.key === "Escape") {
+                                setEditingColumnId(null); // Hủy edit khi bấm Esc
+                              }
+                            }}
+                            autoFocus // Tự động focus vào input khi mở lên
+                            className="h-8 text-sm font-semibold"
+                          />
+                        </div>
+                      ) : (
+                        <KanbanBoardColumnTitle
+                          columnId={column.id}
+                          className="pl-2 w-full select-none" // select-none để tránh bôi đen nhầm khi double click
+                          onDoubleClick={() => startEditingColumn(column)}
+                        >
+                          {column.name}
+                        </KanbanBoardColumnTitle>
+                      )}
                     </KanbanBoardColumnHeader>
 
                     {/* Danh sách cards */}
                     <KanbanBoardColumnList>
                       {tasksToRender
                         .filter((task) => task.listId === column.id)
-                        .map((task) => (
-                          <KanbanBoardColumnListItem
-                            key={task.id}
-                            cardId={task.id}
-                            onDropOverListItem={(data, direction) =>
-                              handleDropOverListItem(task.id, data, direction)
-                            }
-                          >
-                            <KanbanBoardCard
-                              data={task}
-                              onClick={() =>
-                                navigate(`/boards/${boardId}/cards/${task.id}`)
+                        .map((task) => {
+                          const totalItems =
+                            task.checklists?.reduce(
+                              (sum, cl) =>
+                                sum + (cl.checklistItems?.length || 0),
+                              0,
+                            ) ?? 0;
+                          const completedItems =
+                            task.checklists?.reduce(
+                              (sum, cl) =>
+                                sum +
+                                (cl.checklistItems?.filter((i) => i.completed)
+                                  .length || 0),
+                              0,
+                            ) ?? 0;
+                          return (
+                            <KanbanBoardColumnListItem
+                              key={task.id}
+                              cardId={task.id}
+                              onDropOverListItem={(data, direction) =>
+                                handleDropOverListItem(task.id, data, direction)
                               }
-                              className="relative"
                             >
-                              {task.cardLabels &&
-                                task.cardLabels.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {task.cardLabels?.map((cardLabel: any) => {
-                                      const labelDetail = cardLabel?.label;
-                                      if (!labelDetail) return null;
+                              <KanbanBoardCard
+                                data={task}
+                                onClick={() =>
+                                  navigate(
+                                    `/boards/${boardId}/cards/${task.id}`,
+                                  )
+                                }
+                                className="relative"
+                              >
+                                {task.cardLabels &&
+                                  task.cardLabels.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                      {task.cardLabels?.map(
+                                        (cardLabel: any) => {
+                                          const labelDetail = cardLabel?.label;
+                                          if (!labelDetail) return null;
 
-                                      return (
-                                        <span
-                                          key={labelDetail.id}
-                                          className="inline-block px-2 text-[10px] font-semibold text-white rounded-full"
-                                          style={{
-                                            backgroundColor: labelDetail.color,
-                                          }}
-                                        >
-                                          {labelDetail.name}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              <KanbanBoardCardTitle>
-                                {task.title}
-                              </KanbanBoardCardTitle>
+                                          return (
+                                            <span
+                                              key={labelDetail.id}
+                                              className="inline-block px-2 text-[10px] font-semibold text-white rounded-full"
+                                              style={{
+                                                backgroundColor:
+                                                  labelDetail.color,
+                                              }}
+                                            >
+                                              {labelDetail.name}
+                                            </span>
+                                          );
+                                        },
+                                      )}
+                                    </div>
+                                  )}
+                                <KanbanBoardCardTitle>
+                                  {task.title}
+                                </KanbanBoardCardTitle>
 
-                              <div className="flex justify-between items-center gap-2">
-                                <div className="flex gap-2 items-center text-xs">
-                                  <MessageSquareText className="w-4" />
-                                  {task.commentsCount || 0}
-                                </div>
+                                <div className="flex justify-between items-center gap-2">
+                                  <div className="flex gap-4 items-center text-xs">
+                                    <div className="flex items-center gap-1">
+                                      <MessageSquareText className="w-4" />
+                                      {task.commentsCount || 0}
+                                    </div>
 
-                                <div>
-                                  {task.cardMembers &&
-                                    task.cardMembers.length > 0 && (
-                                      <AvatarGroup className="grayscale">
-                                        {/* 2. Map over the members INSIDE the AvatarGroup */}
-                                        {task.cardMembers.map(
-                                          (cardMember: any) => {
-                                            const memberDetail =
-                                              cardMember?.user;
-                                            if (!memberDetail) return null;
-
-                                            return (
-                                              // 3. Always provide a unique 'key' when rendering elements in a list
-                                              <Avatar key={memberDetail.id}>
-                                                <AvatarImage
-                                                  // Use the actual user's avatar URL from your data
-                                                  src={
-                                                    memberDetail.avatar || ""
-                                                  }
-                                                  alt={`@${memberDetail.name}`}
-                                                />
-                                                <AvatarFallback>
-                                                  {memberDetail.name
-                                                    ? memberDetail.name
-                                                        .charAt(0)
-                                                        .toUpperCase()
-                                                    : "?"}
-                                                </AvatarFallback>
-                                              </Avatar>
-                                            );
-                                          },
-                                        )}
-                                      </AvatarGroup>
+                                    {totalItems > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <SquareCheck
+                                          className="w-4 "
+                                          color={
+                                            completedItems === totalItems
+                                              ? "green"
+                                              : "gray"
+                                          }
+                                        />
+                                        <div className="flex items-center gap-1">
+                                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full rounded-full transition-all ${
+                                                completedItems === totalItems
+                                                  ? "bg-green-500"
+                                                  : "bg-blue-400"
+                                              }`}
+                                              style={{
+                                                width: `${(completedItems / totalItems) * 100}%`,
+                                              }}
+                                            />
+                                          </div>
+                                          <span
+                                            className={`text-xs font-medium ${
+                                              completedItems === totalItems
+                                                ? "text-green-600"
+                                                : "text-muted-foreground"
+                                            }`}
+                                          >
+                                            {completedItems}/{totalItems}
+                                          </span>
+                                        </div>
+                                      </div>
                                     )}
+                                  </div>
+
+                                  <div>
+                                    {task.cardMembers &&
+                                      task.cardMembers.length > 0 && (
+                                        <AvatarGroup className="grayscale">
+                                          {/* 2. Map over the members INSIDE the AvatarGroup */}
+                                          {task.cardMembers.map(
+                                            (cardMember: any) => {
+                                              const memberDetail =
+                                                cardMember?.user;
+                                              if (!memberDetail) return null;
+
+                                              return (
+                                                // 3. Always provide a unique 'key' when rendering elements in a list
+                                                <Avatar key={memberDetail.id}>
+                                                  <AvatarImage
+                                                    // Use the actual user's avatar URL from your data
+                                                    src={
+                                                      memberDetail.avatar || ""
+                                                    }
+                                                    alt={`@${memberDetail.name}`}
+                                                  />
+                                                  <AvatarFallback>
+                                                    {memberDetail.name
+                                                      ? memberDetail.name
+                                                          .charAt(0)
+                                                          .toUpperCase()
+                                                      : "?"}
+                                                  </AvatarFallback>
+                                                </Avatar>
+                                              );
+                                            },
+                                          )}
+                                        </AvatarGroup>
+                                      )}
+                                  </div>
                                 </div>
-                              </div>
-                            </KanbanBoardCard>
-                          </KanbanBoardColumnListItem>
-                        ))}
+                              </KanbanBoardCard>
+                            </KanbanBoardColumnListItem>
+                          );
+                        })}
                     </KanbanBoardColumnList>
 
                     {/* Footer để thêm card mới */}

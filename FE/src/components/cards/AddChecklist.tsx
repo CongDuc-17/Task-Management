@@ -9,28 +9,21 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { useCardsStore } from "@/stores/cards.store";
 
-export function AddChecklist({
-  onUpdateChecklist,
-}: {
-  onUpdateChecklist: (action: "add" | "remove", checklistObj: any) => void;
-}) {
+export function AddChecklist() {
   const [title, setTitle] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const { cardId } = useParams() as { cardId: string };
-
+  const { addChecklist } = useCardsStore();
   async function handleAddChecklist() {
-    console.log("Add Checklist", title);
     try {
       const response = await apiClient.post(`/cards/${cardId}/checklists`, {
         title,
       });
       setTitle("");
       setPopoverOpen(false);
-      if (onUpdateChecklist) {
-        onUpdateChecklist("add", response.data);
-      }
-      console.log("Checklist added", response.data);
+      addChecklist(cardId, response.data);
     } catch (error) {
       console.error("Error adding checklist", error);
     }
