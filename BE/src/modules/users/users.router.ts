@@ -18,6 +18,7 @@ import { UsersController } from './users.controller';
 import { autoBindUtil, validateRequestMiddleware } from '@/common';
 import authMiddleware from '@/common/middlewares/auth.middleware';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
+import { uploadAvatarMiddleware } from '@/common/middlewares/upload.middleware';
 
 const usersController = new UsersController();
 
@@ -42,15 +43,6 @@ router.get(
 
 usersRegistry.registerPath({
 	method: 'get',
-	path: '/users/{userId}',
-	tags: ['Users'],
-	request: getUserByUserIdRequestSchema,
-	responses: createApiResponse(getUserResponseDtoSchema, 'Success', StatusCodes.OK),
-});
-router.get('/:userId', authMiddleware.verifyAccessToken, usersController.getUserByUserId);
-
-usersRegistry.registerPath({
-	method: 'get',
 	path: '/users/me',
 	tags: ['Users'],
 	responses: createApiResponse(getUserResponseDtoSchema, 'Success', StatusCodes.OK),
@@ -67,6 +59,7 @@ usersRegistry.registerPath({
 router.put(
 	'/me',
 	authMiddleware.verifyAccessToken,
+	uploadAvatarMiddleware.single('avatar'),
 	validateRequestMiddleware(updateMyInformationRequestValidationSchema),
 	usersController.updateMyInformation,
 );
@@ -84,5 +77,14 @@ router.patch(
 	validateRequestMiddleware(updateMyPasswordRequestValidationSchema),
 	usersController.updateMyPassword,
 );
+
+usersRegistry.registerPath({
+	method: 'get',
+	path: '/users/{userId}',
+	tags: ['Users'],
+	request: getUserByUserIdRequestSchema,
+	responses: createApiResponse(getUserResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.get('/:userId', authMiddleware.verifyAccessToken, usersController.getUserByUserId);
 
 export const usersRouter = router;

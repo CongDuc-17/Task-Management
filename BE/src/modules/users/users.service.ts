@@ -24,6 +24,11 @@ import {
 	PaginationDto,
 	PaginationUtils,
 } from '@/common';
+import {
+	deleteImageFromCloudinary,
+	extractPublicIdFromUrl,
+	uploadImageFromBuffer,
+} from '@/common/utils/cloudinary.utils';
 
 export class UsersService {
 	constructor(
@@ -42,8 +47,8 @@ export class UsersService {
 		const [users, totalUsers] = await this.usersRepository.findUsers({
 			name: name,
 			status: status,
-			skip: 1,
-			take: 10,
+			skip: paginationUtils.skip,
+			take: paginationUtils.take,
 		});
 
 		const userResponse = users.map((user) => new GetUsersResponseDto(user));
@@ -86,28 +91,67 @@ export class UsersService {
 	async updateMyInformation(
 		updateMyInformationRequestDto: UpdateMyInformationRequestDto,
 		myInformationDto: UserInformationDto,
+		file?: Express.Multer.File,
 	): Promise<HttpResponseBodySuccessDto<GetUserResponseDto> | Exception> {
-		const updateUserData = new ObjectComparerDto<users>(
-			myInformationDto,
-		).getUpdatedFields<Prisma.usersUpdateManyMutationInput>(
-			updateMyInformationRequestDto,
-		);
-		if (Object.keys(updateUserData).length === 0) {
-			return new OptionalException(
-				StatusCodes.UNPROCESSABLE_ENTITY,
-				'No fields to update',
+		let uploadedImage: any = null;
+
+		try {
+			if (file) {
+				uploadedImage = await uploadImageFromBuffer(
+					file.buffer,
+					file.mimetype,
+					'TrelloLike_Avatars',
+				);
+
+				updateMyInformationRequestDto.avatar = uploadedImage.secure_url;
+				console.log('Ảnh đã được upload lên Cloudinary:', uploadedImage);
+			}
+
+			const updateUserData = new ObjectComparerDto<users>(
+				myInformationDto,
+			).getUpdatedFields<Prisma.usersUpdateManyMutationInput>(
+				updateMyInformationRequestDto,
+			);
+			if (Object.keys(updateUserData).length === 0) {
+				if (uploadedImage && uploadedImage.public_id) {
+					const check = await deleteImageFromCloudinary(
+						uploadedImage.public_id,
+					); // dọn dẹp rác
+					console.log(
+						'Đã xóa ảnh đã upload do không có trường nào được cập nhật:',
+						check,
+					);
+				}
+				return new OptionalException(
+					StatusCodes.UNPROCESSABLE_ENTITY,
+					'No fields to update',
+				);
+			}
+
+			const updatedUser = await this.usersRepository.updateUser({
+				userId: myInformationDto.id,
+				user: updateUserData,
+			});
+			if (file && myInformationDto.avatar) {
+				const oldPublicId = extractPublicIdFromUrl(myInformationDto.avatar);
+				if (oldPublicId) {
+					await deleteImageFromCloudinary(oldPublicId);
+					console.log(`Đã xóa thành công ảnh cũ có public_id: ${oldPublicId}`);
+				}
+			}
+			return {
+				success: true,
+				data: new GetUserResponseDto(updatedUser),
+			};
+		} catch (error) {
+			if (uploadedImage && uploadedImage.public_id) {
+				await deleteImageFromCloudinary(uploadedImage.public_id);
+			}
+			throw new OptionalException(
+				StatusCodes.INTERNAL_SERVER_ERROR,
+				'Lỗi khi cập nhật thông tin người dùng',
 			);
 		}
-
-		const updatedUser = await this.usersRepository.updateUser({
-			userId: myInformationDto.id,
-			user: updateUserData,
-		});
-
-		return {
-			success: true,
-			data: new GetUserResponseDto(updatedUser),
-		};
 	}
 
 	async updateMyPassword(

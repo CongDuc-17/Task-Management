@@ -13,6 +13,7 @@ import {
 import { UsersService } from './users.service';
 
 import { HttpResponseDto, PaginationDto } from '@/common';
+import { StatusCodes } from 'http-status-codes/build/cjs/status-codes';
 
 export class UsersController {
 	constructor(private readonly usersService: UsersService = new UsersService()) {}
@@ -44,7 +45,9 @@ export class UsersController {
 	}
 
 	async getMyInformation(req: Request): Promise<Response> {
+		console.log(req.user);
 		const myInformationDto = req.user as UserInformationDto;
+
 		const result = await this.usersService.getMyInformation(myInformationDto);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
@@ -52,19 +55,26 @@ export class UsersController {
 		return new HttpResponseDto().success<GetUserResponseDto>(result);
 	}
 
-	async updateMyInformation(req: Request): Promise<Response> {
-		const updateMyInformationRequestDto = new UpdateMyInformationRequestDto(
-			req.query,
-		);
+	async updateMyInformation(req: Request, res: Response): Promise<Response> {
+		const updateMyInformationRequestDto = new UpdateMyInformationRequestDto(req.body);
+
 		const myInformationDto = req.user as UserInformationDto;
+		const file = req.file;
 		const result = await this.usersService.updateMyInformation(
 			updateMyInformationRequestDto,
 			myInformationDto,
+			file,
 		);
 		if (result instanceof Exception) {
-			return new HttpResponseDto().exception(result);
+			return res.status(result.status || 400).json({
+				success: false,
+				message: result.message,
+			});
 		}
-		return new HttpResponseDto().success<GetUserResponseDto>(result);
+		return res.status(StatusCodes.OK).json({
+			success: true,
+			data: result.data,
+		});
 	}
 
 	async updateMyPassword(req: Request): Promise<Response> {
