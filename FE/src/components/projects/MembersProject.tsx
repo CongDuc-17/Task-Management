@@ -147,7 +147,7 @@ export function MembersProject({ projectId }: { projectId: string }) {
       <form>
         <DialogTrigger asChild>
           <div className="flex flex-row flex-wrap items-center pr-4 gap-6 md:gap-12">
-            <AvatarGroup className="grayscale">
+            <AvatarGroup className="">
               {projectMembers &&
                 projectMembers?.slice(0, 3).map((member, index) => (
                   <Avatar key={index}>

@@ -222,7 +222,7 @@ export function CardDetail() {
               </div>
               <div className="flex items-center flex-wrap pr-4 gap-2">
                 {card.cardMembers && card.cardMembers?.length > 0 ? (
-                  <AvatarGroup className="grayscale">
+                  <AvatarGroup className="">
                     {/* 2. Map over the members INSIDE the AvatarGroup */}
                     {card.cardMembers.map((cardMember: any) => {
                       const memberDetail = cardMember?.user;
