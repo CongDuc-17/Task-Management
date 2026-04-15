@@ -7,11 +7,11 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 import trelloLogo from "@/assets/Trello-Logo--Streamline-Logos.svg";
-import profile from "@/assets/User-Circle--Streamline-Micro.png";
-import exit from "@/assets/Exit--Streamline-Solar.svg";
+
 import {
   Accordion,
   AccordionContent,
@@ -24,19 +24,34 @@ import { Folder } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Link } from "react-router-dom";
 
+import { useUser } from "@/hooks/useUser";
+import { Avatar, AvatarImage } from "../ui/avatar";
+
 export function AppSidebar() {
   const { projects, loading, error } = useProjects();
 
+  const { user } = useUser();
+
   return (
-    <Sidebar>
-      <Link to="/dashboard">
-        <SidebarHeader>
+    <Sidebar collapsible="icon" className="group/sidebar">
+      <SidebarHeader className="relative">
+        <Link to="/dashboard">
           <div className="flex items-center gap-2 px-4 py-3">
             <img src={trelloLogo} alt="Trello Logo" className="w-8 h-8" />
-            <div className="font-semibold text-lg">Trello</div>
+            <div className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
+              Trello
+            </div>
           </div>
-        </SidebarHeader>
-      </Link>
+        </Link>
+        <div
+          className="absolute right-2 top-1/2 -translate-y-1/2 
+                        opacity-1 group-hover/sidebar:opacity-100 
+                        transition-opacity duration-200
+                        "
+        >
+          <SidebarTrigger className="h-7 w-7" />
+        </div>
+      </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
@@ -50,7 +65,7 @@ export function AppSidebar() {
             Projects
           </SidebarGroupLabel>
 
-          <SidebarGroupContent className="pl-6">
+          <SidebarGroupContent className="pl-6 group-data-[collapsible=icon]:hidden">
             {loading && <div>Loading...</div>}
             {error && <div>Error: Failed to fetch projects</div>}
 
@@ -81,42 +96,33 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          {/* <SidebarMenuItem>
-              <SidebarMenuButton>Username</SidebarMenuButton>
-            </SidebarMenuItem> */}
           <hr />
-          <Popover>
-            <PopoverTrigger asChild>
-              <div className="flex items-center gap-4 px-4 py-3 cursor-pointer ">
-                <img
-                  src={profile}
-                  alt="User Profile"
-                  className="w-8 h-8 rounded-full"
-                />
-                <div className="font-medium">John Doe</div>
-              </div>
-            </PopoverTrigger>
-            <PopoverContent>
-              <Button
-                variant="ghost"
-                className="w-full border-none mb-2 flex justify-start items-center gap-2"
-              >
-                <img
-                  src={profile}
-                  alt="User Profile"
-                  className="w-6 h-6 rounded-full"
-                />
-                <span>Profile</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full border-none mb-2 flex justify-start items-center gap-2 "
-              >
-                <img src={exit} alt="Exit Icon" />
-                <span className="text-red-500">Sign Out</span>
-              </Button>
-            </PopoverContent>
-          </Popover>
+          <div className="group-data-[collapsible=icon]:hidden">
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="flex items-center gap-4 px-4 py-3 cursor-pointer ">
+                  <Avatar>
+                    <AvatarImage src={user?.avatar} alt="User Profile" />
+                  </Avatar>
+                  <div className="font-medium">{user?.name}</div>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 left-0 ">
+                <Button
+                  variant="ghost"
+                  className="w-full border-none  flex justify-start items-center gap-2"
+                >
+                  <span>Profile</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full border-none flex justify-start items-center gap-2 "
+                >
+                  <span className="text-red-500">Sign Out</span>
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </div>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

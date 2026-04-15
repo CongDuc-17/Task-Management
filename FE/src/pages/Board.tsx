@@ -15,7 +15,11 @@ import {
   KanbanBoardColumnFooter,
   type KanbanBoardDropDirection,
 } from "@/components/kanban";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/SideBar";
 import { useLists } from "@/hooks/useLists";
 import { useParams } from "react-router-dom";
@@ -375,9 +379,8 @@ export function Board() {
   };
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="overflow-x-hidden relative">
+    <>
+      <div className="flex flex-col h-full w-full overflow-hidden">
         <HeaderBoard
           boardId={boardId}
           boardName={board?.name}
@@ -385,7 +388,7 @@ export function Board() {
           fetchBoard={fetchBoard}
         />
         <KanbanBoardProvider>
-          <div className="h-screen p-4">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
             <KanbanBoard>
               {columns.map((column) => (
                 <div
@@ -558,7 +561,7 @@ export function Board() {
                                   <div>
                                     {task.cardMembers &&
                                       task.cardMembers.length > 0 && (
-                                        <AvatarGroup className="grayscale">
+                                        <AvatarGroup className="">
                                           {/* 2. Map over the members INSIDE the AvatarGroup */}
                                           {task.cardMembers.map(
                                             (cardMember: any) => {
@@ -608,17 +611,19 @@ export function Board() {
                 </div>
               ))}
 
-              <CreateList
-                boardId={boardId}
-                createList={createList}
-                loading={listsLoading}
-              />
+              <div className="flex-shrink-0 w-88">
+                <CreateList
+                  boardId={boardId}
+                  createList={createList}
+                  loading={listsLoading}
+                />
+              </div>
             </KanbanBoard>
           </div>
         </KanbanBoardProvider>
         {/* Outlet để render nested routes (CardDetail modal) */}
         <Outlet />
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </>
   );
 }

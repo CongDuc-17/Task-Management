@@ -73,7 +73,7 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
     <Popover>
       <PopoverTrigger asChild>
         <Avatar>
-          <AvatarImage src="" alt="@shadcn" className="grayscale" />
+          <AvatarImage src="" alt="@shadcn" className="" />
           <AvatarFallback>
             <Plus />
           </AvatarFallback>
@@ -101,10 +101,15 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
                 key={member.userId || member.user.id || index}
               >
                 <div className="flex items-center r gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-300 justify-center flex items-center ">
-                    {member.userName ||
-                      member.user?.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar key={index}>
+                    <AvatarImage
+                      src={member.user.avatar}
+                      alt={member.user.name}
+                    />
+                    <AvatarFallback>
+                      {member.user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>{member.user?.name}</div>
                 </div>
 
@@ -133,10 +138,15 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
                   onClick={() => handleAddMemberToCard(member.user.id)}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-300 justify-center flex items-center ">
-                      {member.userName ||
-                        member.user?.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar key={index}>
+                      <AvatarImage
+                        src={member.user.avatar}
+                        alt={member.user.name}
+                      />
+                      <AvatarFallback>
+                        {member.user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
                     <div>{member.user.name}</div>
                   </div>

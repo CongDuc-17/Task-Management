@@ -35,36 +35,33 @@ export function ProjectDetail() {
   const project = getProjectById(projectId);
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
-      <SidebarInset className="relative">
-        <HeaderProject
-          projectId={projectId}
-          projectName={project?.name}
-          projectMembers={project?.members}
-          onProjectUpdated={handleProjectUpdated}
-        />
-        <main className="">
-          <div className="grid grid-cols-4 gap-6 p-8">
-            {loading && <div>Loading...</div>}
-            {error && <div>Error: {error}</div>}
+    <>
+      <HeaderProject
+        projectId={projectId}
+        projectName={project?.name}
+        projectMembers={project?.members}
+        onProjectUpdated={handleProjectUpdated}
+      />
+      <main className="">
+        <div className="grid grid-cols-4 gap-6 p-8">
+          {loading && <div>Loading...</div>}
+          {error && <div>Error: {error}</div>}
 
-            {!loading &&
-              !error &&
-              boards.map((b) => (
-                <Link to={`/boards/${b.id}`} key={b.id}>
-                  <Card className="h-36 cursor-pointer hover:shadow-lg transition-shadow relative">
-                    <div className="absolute bottom-0 w-full text-center p-2 bg-gray-100 rounded-b-lg font-medium">
-                      {b.name}
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+          {!loading &&
+            !error &&
+            boards.map((b) => (
+              <Link to={`/boards/${b.id}`} key={b.id}>
+                <Card className="h-36 cursor-pointer hover:shadow-lg transition-shadow relative">
+                  <div className="absolute bottom-0 w-full text-center p-2 bg-gray-100 rounded-b-lg font-medium">
+                    {b.name}
+                  </div>
+                </Card>
+              </Link>
+            ))}
 
-            <CreateBoard projectId={projectId} />
-          </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          <CreateBoard projectId={projectId} />
+        </div>
+      </main>
+    </>
   );
 }
