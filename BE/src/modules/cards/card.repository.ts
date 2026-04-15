@@ -3,8 +3,45 @@ export class CardsRepository {
 	constructor(private readonly prismaService = new PrismaService()) {}
 
 	async getAllCardsByListId(listId: string) {
+		console.log('listId in repository:', listId);
 		return this.prismaService.cards.findMany({
 			where: { listId: listId },
+			include: {
+				cardMembers: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								avatar: true,
+							},
+						},
+					},
+				},
+				cardLabels: {
+					include: {
+						label: {
+							select: {
+								id: true,
+								name: true,
+								color: true,
+							},
+						},
+					},
+				},
+				checklists: {
+					include: {
+						checklistItems: {
+							select: {
+								id: true,
+								title: true,
+								completed: true,
+							},
+							orderBy: { createdAt: 'asc' },
+						},
+					},
+				},
+			},
 			orderBy: { position: 'asc' },
 		});
 	}

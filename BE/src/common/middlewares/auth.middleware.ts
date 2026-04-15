@@ -60,6 +60,7 @@ class AuthMiddleware extends BaseAutoBindMiddleware {
 			user = new UserInformationDto(userData);
 
 			req.user = user;
+			console.log('Authenticated user:', req.user);
 		} catch (error) {
 			if (error instanceof TokenExpiredError) {
 				throw new OptionalException(StatusCodes.UNAUTHORIZED, error.message);

@@ -6,6 +6,10 @@ export class CardResponseDto {
 	position: number;
 	listId: string;
 	createdAt: Date;
+	members?: string[];
+	labels?: string[];
+	checklists?: string[];
+	comments?: string[];
 
 	constructor(card: {
 		id: string;
@@ -13,12 +17,20 @@ export class CardResponseDto {
 		position: number;
 		listId: string;
 		createdAt: Date;
+		members?: string[];
+		labels?: string[];
+		checklists?: string[];
+		comments?: string[];
 	}) {
 		this.id = card.id;
 		this.title = card.title;
 		this.position = card.position;
 		this.listId = card.listId;
 		this.createdAt = card.createdAt;
+		this.members = card.members;
+		this.labels = card.labels;
+		this.checklists = card.checklists;
+		this.comments = card.comments;
 	}
 }
 
@@ -28,6 +40,10 @@ export const cardResponseDtoSchema = z.object({
 	position: z.number(),
 	listId: z.string().uuid(),
 	createdAt: z.date(),
+	members: z.array(z.string()).optional(),
+	labels: z.array(z.string()).optional(),
+	checklists: z.array(z.string()).optional(),
+	comments: z.array(z.string()).optional(),
 });
 
 export * from './cardBasic.response';
