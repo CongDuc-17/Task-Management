@@ -24,13 +24,13 @@ import { Folder } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Link } from "react-router-dom";
 
-import { useUser } from "@/hooks/useUser";
 import { Avatar, AvatarImage } from "../ui/avatar";
+import { useUserStore } from "@/stores/user.store";
 
 export function AppSidebar() {
   const { projects, loading, error } = useProjects();
 
-  const { user } = useUser();
+  const { user } = useUserStore();
 
   return (
     <Sidebar collapsible="icon" className="group/sidebar">
@@ -102,7 +102,11 @@ export function AppSidebar() {
               <PopoverTrigger asChild>
                 <div className="flex items-center gap-4 px-4 py-3 cursor-pointer ">
                   <Avatar>
-                    <AvatarImage src={user?.avatar} alt="User Profile" />
+                    <AvatarImage
+                      src={user?.avatar}
+                      alt="User Profile"
+                      className="object-cover "
+                    />
                   </Avatar>
                   <div className="font-medium">{user?.name}</div>
                 </div>

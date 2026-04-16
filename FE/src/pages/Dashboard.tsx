@@ -1,8 +1,5 @@
-import { AppSidebar } from "@/components/layout/SideBar";
 import { CreateProject } from "@/components/projects/CreateProject";
-
 import { Card } from "@/components/ui/card";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 import { useProjects } from "@/hooks/useProjects";
 
@@ -14,12 +11,12 @@ export function Dashboard() {
 
   return (
     <>
-      <div className="fixed w-full bg-white z-10 shadow-md flex  items-center">
+      <div className="sticky top-0 z-10 shadow-md flex justify-between items-center px-4 py-2">
         <h1 className="text-2xl font-bold p-4 ">Dashboard</h1>
 
         <hr />
       </div>
-      <main className="pt-15">
+      <main className=" h-screen overflow-y-auto">
         <div className="p-8 flex justify-between items-center">
           <div>
             <div className="text-3xl font-bold">Dashboard</div>
