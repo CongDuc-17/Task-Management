@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Camera, Mail, MapPin } from "lucide-react";
+import { Calendar, Camera, Eye, Mail, MapPin, EyeOff } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,13 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useUser } from "@/hooks/useUser";
+
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { Spinner } from "@/components/ui/spinner";
+import { useUserStore } from "@/stores/user.store";
+import { ChangePassword } from "@/components/user/ChangePassword";
 
 export function Profile() {
-  const { user, getMyInformation } = useUser();
+  const { user, getMyInformation } = useUserStore();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -112,6 +114,7 @@ export function Profile() {
                   "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
                 }
                 alt="User Avatar"
+                className="object-cover "
               />
               <AvatarFallback>
                 {user?.name?.charAt(0).toUpperCase()}
@@ -292,9 +295,10 @@ export function Profile() {
                     Update your password regularly to keep your account secure.
                   </div>
                 </div>
-                <Button variant="outline" className="hover:cursor-pointer">
+                {/* <Button variant="outline" className="hover:cursor-pointer">
                   Change Password
-                </Button>
+                </Button> */}
+                <ChangePassword />
               </CardContent>
             </Card>
           </TabsContent>
