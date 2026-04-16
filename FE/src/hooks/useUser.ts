@@ -6,7 +6,7 @@ export const useUser = () => {
   async function getMyInformation() {
     try {
       const response = await apiClient.get("/users/me");
-      console.log("My information:", response.data);
+
       setUser(response.data);
     } catch (error) {
       console.error("Error fetching my information:", error);

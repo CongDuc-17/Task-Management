@@ -10,6 +10,7 @@ import { Board } from "./pages/Board";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { CardDetail } from "./pages/CardDetail";
 import { AppLayout } from "./components/layout/AppLayout";
+import { Profile } from "./pages/Profile";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           {/* Nested route cho card detail modal */}
           <Route path="cards/:cardId" element={<CardDetail />} />
         </Route>
+        <Route path="/me" element={<Profile />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
