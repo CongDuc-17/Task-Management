@@ -108,12 +108,14 @@ export function AppSidebar() {
                 </div>
               </PopoverTrigger>
               <PopoverContent className="w-64 left-0 ">
-                <Button
-                  variant="ghost"
-                  className="w-full border-none  flex justify-start items-center gap-2"
-                >
-                  <span>Profile</span>
-                </Button>
+                <Link to="/me">
+                  <Button
+                    variant="ghost"
+                    className="w-full border-none  flex justify-start items-center gap-2"
+                  >
+                    <span>Profile</span>
+                  </Button>
+                </Link>
                 <Button
                   variant="ghost"
                   className="w-full border-none flex justify-start items-center gap-2 "
