@@ -13,7 +13,7 @@ import {
 import { UsersService } from './users.service';
 
 import { HttpResponseDto, PaginationDto } from '@/common';
-import { StatusCodes } from 'http-status-codes/build/cjs/status-codes';
+import { StatusCodes } from 'http-status-codes';
 
 export class UsersController {
 	constructor(private readonly usersService: UsersService = new UsersService()) {}
@@ -60,21 +60,28 @@ export class UsersController {
 
 		const myInformationDto = req.user as UserInformationDto;
 		const file = req.file;
-		const result = await this.usersService.updateMyInformation(
-			updateMyInformationRequestDto,
-			myInformationDto,
-			file,
-		);
-		if (result instanceof Exception) {
-			return res.status(result.status || 400).json({
+		try {
+			const result = await this.usersService.updateMyInformation(
+				updateMyInformationRequestDto,
+				myInformationDto,
+				file,
+			);
+			if (result instanceof Exception) {
+				return res.status(result.status || 400).json({
+					success: false,
+					message: result.message,
+				});
+			}
+			return res.status(StatusCodes.OK).json({
+				success: true,
+				data: result.data,
+			});
+		} catch (error) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				success: false,
-				message: result.message,
+				message: error.message || 'Lỗi server',
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			success: true,
-			data: result.data,
-		});
 	}
 
 	async updateMyPassword(req: Request): Promise<Response> {

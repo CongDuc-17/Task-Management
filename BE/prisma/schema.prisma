@@ -132,6 +132,8 @@ model tokens {
   userId       String @map("user_id")
   user         users  @relation(fields: [userId], references: [id])
   refreshToken String @unique @map("refresh_token")
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at")
 
   @@map("Tokens")
 }

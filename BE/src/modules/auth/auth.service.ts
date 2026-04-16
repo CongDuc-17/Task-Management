@@ -28,6 +28,7 @@ import {
 	OptionalException,
 	signJWT,
 } from '@/common';
+import { cleanupExpiredTokens } from '@/common/utils/tokenCleanup.util';
 import { otpsConfig, usersConfig } from '@/configs';
 
 import { UserRoleEnum } from '@/common/enums/roles/userRole.enum';
@@ -112,6 +113,8 @@ export class AuthService {
 			userId: account.userId,
 		});
 
+		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
 		await this.authRepository.createToken({
 			token: {
 				refreshToken: refreshToken,
@@ -120,6 +123,7 @@ export class AuthService {
 						id: account.userId,
 					},
 				},
+				expiresAt,
 			},
 		});
 
@@ -145,6 +149,8 @@ export class AuthService {
 			userId: socialAccountInformation.userId,
 		});
 
+		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
 		await this.authRepository.createToken({
 			token: {
 				refreshToken: refreshToken,
@@ -153,6 +159,7 @@ export class AuthService {
 						id: socialAccountInformation.userId,
 					},
 				},
+				expiresAt,
 			},
 		});
 
@@ -172,9 +179,28 @@ export class AuthService {
 	async refreshToken(
 		myInformation: UserInformationDto,
 	): Promise<HttpResponseBodySuccessDto<LoginResponseDto> | Exception> {
+		// Cleanup expired tokens (on-demand)
+		await cleanupExpiredTokens();
+
+		const latestToken = await this.authRepository.getLatestToken(myInformation.id);
+
+		if (latestToken) {
+			const timeSinceCreation = Date.now() - latestToken.createdAt.getTime();
+			const fiveMinutesInMs = 5 * 60 * 1000;
+
+			if (timeSinceCreation < fiveMinutesInMs) {
+				throw new OptionalException(
+					StatusCodes.TOO_MANY_REQUESTS,
+					'Refresh token too frequently. Please wait before requesting a new token.',
+				);
+			}
+		}
+		await this.authRepository.deleteToken(myInformation.id);
 		const { accessToken, refreshToken } = await signJWT({
 			userId: myInformation.id,
 		});
+
+		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
 		await this.authRepository.createToken({
 			token: {
@@ -184,6 +210,7 @@ export class AuthService {
 						id: myInformation.id,
 					},
 				},
+				expiresAt,
 			},
 		});
 
@@ -303,6 +330,21 @@ export class AuthService {
 		return {
 			success: true,
 			data: account,
+		};
+	}
+
+	async logout(
+		myInformation: UserInformationDto,
+	): Promise<HttpResponseBodySuccessDto<null> | Exception> {
+		await this.authRepository.deleteToken(myInformation.id);
+
+		return {
+			success: true,
+			data: null,
+			cookies: {
+				accessToken: '',
+				refreshToken: '',
+			},
 		};
 	}
 }
