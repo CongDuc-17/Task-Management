@@ -116,12 +116,13 @@ export class UsersService {
 				if (uploadedImage && uploadedImage.public_id) {
 					const check = await deleteImageFromCloudinary(
 						uploadedImage.public_id,
-					); // dọn dẹp rác
+					);
 					console.log(
 						'Đã xóa ảnh đã upload do không có trường nào được cập nhật:',
 						check,
 					);
 				}
+				console.log('Không có trường nào được cập nhật');
 				return new OptionalException(
 					StatusCodes.UNPROCESSABLE_ENTITY,
 					'No fields to update',

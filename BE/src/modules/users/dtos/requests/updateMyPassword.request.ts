@@ -17,9 +17,16 @@ const updateMyPasswordRequestBody = z
 	.strict();
 
 export const updateMyPasswordRequestValidationSchema: ZodValidationSchema = {
-	query: updateMyPasswordRequestBody,
+	body: updateMyPasswordRequestBody,
 };
 
 export const updateMyPasswordRequestSchema = {
-	query: updateMyPasswordRequestBody,
+	body: {
+		description: 'Request body for updating user password',
+		content: {
+			'application/json': {
+				schema: updateMyPasswordRequestBody,
+			},
+		},
+	},
 };

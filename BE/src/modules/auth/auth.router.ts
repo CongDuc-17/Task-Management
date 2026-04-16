@@ -150,4 +150,12 @@ router.post(
 	authController.forgotPassword,
 );
 
+authRegistry.registerPath({
+	method: 'post',
+	path: '/auth/logout',
+	tags: ['Auth'],
+	responses: createApiResponse(z.null(), 'Success'),
+});
+router.post('/logout', authMiddleware.verifyAccessToken, authController.logout);
+
 export const authRouter = router;

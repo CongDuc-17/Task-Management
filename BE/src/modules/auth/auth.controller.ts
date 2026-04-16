@@ -127,4 +127,12 @@ export class AuthController {
 		}
 		return new HttpResponseDto().success<AccountResponseDto>(result);
 	}
+	async logout(req: Request): Promise<Response> {
+		const myInformation = req.user as UserInformationDto;
+		const result = await this.authService.logout(myInformation);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
 }

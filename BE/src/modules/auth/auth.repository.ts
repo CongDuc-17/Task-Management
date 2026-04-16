@@ -116,4 +116,35 @@ export class AuthRepository {
 			},
 		});
 	}
+
+	async getLatestToken(userId: string): Promise<tokens | null> {
+		return this.prismaService.tokens.findFirst({
+			where: { userId },
+			orderBy: { createdAt: 'desc' },
+		});
+	}
+
+	async deleteToken(userId: string): Promise<Prisma.BatchPayload> {
+		return this.prismaService.tokens.deleteMany({
+			where: {
+				userId: userId,
+			},
+		});
+	}
+
+	async findTokenByRefreshToken(refreshToken: string): Promise<tokens | null> {
+		return this.prismaService.tokens.findUnique({
+			where: { refreshToken },
+		});
+	}
+
+	async deleteExpiredTokens(): Promise<Prisma.BatchPayload> {
+		return this.prismaService.tokens.deleteMany({
+			where: {
+				expiresAt: {
+					lt: new Date(),
+				},
+			},
+		});
+	}
 }

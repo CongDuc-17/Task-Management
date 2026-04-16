@@ -14,6 +14,7 @@ import {
 	requestContextMiddleware,
 	setCookieMiddleware,
 } from './common';
+import { startTokenCleanupScheduler } from './common/utils/tokenCleanup.util';
 
 const app: Express = express();
 
@@ -50,6 +51,9 @@ app.use('/roles', Modules.rolesRouter);
 app.use(errorHandlerMiddleware);
 
 app.use(openAPIRouter);
+
+// Start token cleanup scheduler (chạy mỗi 1 giờ)
+startTokenCleanupScheduler(1);
 
 app.listen(appEnv.PORT, () => {
 	const { NODE_ENV, HOST, PORT } = appEnv;
