@@ -10,7 +10,6 @@ import { AuthRepository } from '../auth.repository';
 import { InternalServerException, OptionalException } from '@/common';
 import { GoogleOauthConfig } from '@/configs';
 import { socialAccountsWithPartialRelations } from '@/models';
-import { error } from 'console';
 
 export class GoogleOauthStrategy {
 	constructor(
@@ -122,7 +121,7 @@ export class GoogleOauthStrategy {
 			return done(null, { socialAccountInformation: socialAccount });
 		} catch (err) {
 			return done(
-				error instanceof Error ? error : new InternalServerException(),
+				err instanceof Error ? err : new InternalServerException(),
 				false,
 			);
 		}

@@ -13,7 +13,7 @@ export type InvitationWithOwner = invitations & {
 	project?: projects | null;
 	board?: boards | null;
 };
-export class InvitationRepository {
+export class InvitationsRepository {
 	constructor(private readonly prismaService = new PrismaService()) {}
 
 	async create(data: {
@@ -82,6 +82,12 @@ export class InvitationRepository {
 		});
 	}
 
+	async deleteById(id: string) {
+		return this.prismaService.invitations.delete({
+			where: { id },
+		});
+	}
+
 	async checkDuplicateInvitation(params: {
 		email: string;
 		projectId?: string;
@@ -98,24 +104,24 @@ export class InvitationRepository {
 		});
 	}
 	async createShareLink(data: {
-  projectId?: string;
-  boardId?: string;
-  token: string;
-  roleId: string;
-  inviterId: string;
-  expiresAt: Date;
-}): Promise<invitations> {
-  return this.prismaService.invitations.create({
-    data: {
-      projectId: data.projectId,
-      boardId: data.boardId,
-      email: '', // Empty cho shared link
-      token: data.token,
-      roleId: data.roleId,
-      createdBy: data.inviterId,
-      expiresAt: data.expiresAt,
-      type: 'LINK', // NEW
-    },
-  });
-}
+		projectId?: string;
+		boardId?: string;
+		token: string;
+		roleId: string;
+		inviterId: string;
+		expiresAt: Date;
+	}): Promise<invitations> {
+		return this.prismaService.invitations.create({
+			data: {
+				projectId: data.projectId,
+				boardId: data.boardId,
+				email: '', // Empty cho shared link
+				token: data.token,
+				roleId: data.roleId,
+				createdBy: data.inviterId,
+				expiresAt: data.expiresAt,
+				type: 'LINK', // NEW
+			},
+		});
+	}
 }
