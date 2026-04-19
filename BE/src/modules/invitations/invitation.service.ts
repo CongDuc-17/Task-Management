@@ -7,7 +7,7 @@ import { BoardsRepository } from '../boards/boards.repository';
 import { UsersRepository } from '../users/users.repository';
 
 import { ProjectsRepository } from '../projects/project.repository';
-import { InvitationRepository } from './invitation.repository';
+import { InvitationsRepository } from './invitation.repository';
 
 import {
 	ConflictException,
@@ -26,7 +26,7 @@ import { startsWith } from 'zod';
 
 export class InvitationService {
 	constructor(
-		private readonly invitationRepository = new InvitationRepository(),
+		private readonly invitationRepository = new InvitationsRepository(),
 		private readonly usersRepository = new UsersRepository(),
 		private readonly projectMembersRepository = new ProjectMembersRepository(),
 		private readonly boardMembersRepository = new BoardMembersRepository(),
@@ -391,10 +391,9 @@ export class InvitationService {
 		if (invitation.createdBy !== userId) {
 			throw new ConflictException('Only the inviter can reject the invitation');
 		}
-		await this.invitationRepository.updateStatus(
-			invitation.id,
-			InvitationStatusEnum.CANCELLED,
-		);
+
+		await this.invitationRepository.deleteById(invitation.id);
+
 		return {
 			success: true,
 			data: 'Invitation rejected successfully',
@@ -413,59 +412,4 @@ export class InvitationService {
 			data: invitations,
 		};
 	}
-
-	// async getInvitationInfo(token: string): Promise<ServiceResponse<any> | Exception> {
-	// 	const invitation = await this.invitationRepository.findByToken(token);
-
-	// 	if (!invitation) {
-	// 		throw new NotFoundException('Invitation not found');
-	// 	}
-
-	// 	if (invitation.status !== InvitationStatusEnum.PENDING) {
-	// 		throw new ConflictException('Invitation has already been processed');
-	// 	}
-
-	// 	if (invitation.expiresAt < new Date()) {
-	// 		await this.invitationRepository.updateStatus(
-	// 			invitation.id,
-	// 			InvitationStatusEnum.EXPIRED,
-	// 		);
-	// 		throw new ConflictException('Invitation has expired');
-	// 	}
-
-	// 	// Lấy thông tin role
-	// 	const role = await this.rolesRepository.findById(invitation.roleId);
-
-	// 	// Fetch project or board details
-	// 	let projectName: string | undefined;
-	// 	let boardName: string | undefined;
-
-	// 	if (invitation.projectId) {
-	// 		const project = await this.projectRepository.getProjectById(
-	// 			invitation.projectId,
-	// 		);
-	// 		projectName = project?.name;
-	// 	} else if (invitation.boardId) {
-	// 		const board = await this.boardsRepository.getBoardById(
-	// 			invitation.boardId,
-	// 		);
-	// 		boardName = board?.name;
-	// 	}
-
-	// 	// Return thông tin để hiển thị trên UI
-	// 	return new ServiceResponse(
-	// 		ResponseStatus.Success,
-	// 		'Invitation info retrieved',
-	// 		{
-	// 			email: invitation.email,
-	// 			inviterName: invitation.owner?.name || 'Someone',
-	// 			projectName,
-	// 			boardName,
-	// 			roleName: role?.roleName,
-	// 			expiresAt: invitation.expiresAt,
-	// 			type: invitation.projectId ? 'project' : 'board',
-	// 		},
-	// 		StatusCodes.OK,
-	// 	);
-	// }
 }

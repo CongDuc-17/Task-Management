@@ -1,3 +1,4 @@
+import { invitations } from './../../models/modelSchema/invitationsSchema';
 import { UserStatusEnum } from '@prisma/client';
 import { Exception } from '@tsed/exceptions';
 import { genSalt, hash } from 'bcrypt';
@@ -34,6 +35,7 @@ import { otpsConfig, usersConfig } from '@/configs';
 import { UserRoleEnum } from '@/common/enums/roles/userRole.enum';
 import { RolesRepository } from '../roles/roles.repository';
 import { UserRoleRepository } from '../userRole/userRole.repository';
+import { InvitationsRepository } from '../invitations/invitation.repository';
 
 export class AuthService {
 	constructor(
@@ -43,6 +45,7 @@ export class AuthService {
 		private readonly usersRepository = new UsersRepository(),
 		private readonly userRoleRepository = new UserRoleRepository(),
 		private readonly rolesRepository = new RolesRepository(),
+		private readonly invitationsRepository = new InvitationsRepository(),
 	) {}
 
 	async register(
@@ -80,6 +83,10 @@ export class AuthService {
 			console.log('OK');
 		}
 
+		await this.sendOtp({
+			email: registerDto.email,
+		});
+
 		return {
 			success: true,
 			data: new AccountResponseDto(newAccount),
@@ -104,6 +111,12 @@ export class AuthService {
 			);
 		}
 
+		if (account.user?.verify === false) {
+			throw new OptionalException(
+				StatusCodes.FORBIDDEN,
+				'Your account has not been verified. Please verify your account before logging in.',
+			);
+		}
 		const hashedPassword = await hash(loginRequestDto.password, account.salt);
 		if (hashedPassword !== account.password) {
 			throw new OptionalException(StatusCodes.UNAUTHORIZED, 'Invalid password');
@@ -267,7 +280,7 @@ export class AuthService {
 			throw new NotFoundException('account');
 		}
 
-		if (!account.user.verify === true) {
+		if (account.user.verify === true) {
 			throw new OptionalException(
 				StatusCodes.CONFLICT,
 				'Account is already verified',
@@ -291,6 +304,17 @@ export class AuthService {
 
 		const accountResponse = new AccountResponseDto(account);
 		accountResponse.verify = true;
+
+		const pendingInvites = await this.invitationsRepository.findPendingByEmail(
+			accountResponse.email,
+		);
+		if (pendingInvites.length > 0) {
+			await Promise.all(
+				pendingInvites.map((invite) =>
+					this.invitationsRepository.updateStatus(invite.id, 'ACCEPTED'),
+				),
+			);
+		}
 
 		return {
 			success: true,

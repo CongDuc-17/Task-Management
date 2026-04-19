@@ -11,23 +11,47 @@ const shareLinkBodyRequestSchema = z.object({
 	roleId: z.string().optional(),
 });
 
-const shareLinkForProjectRequestParams = z
+export const shareLinkForProjectRequestParams = z
 	.object({
 		projectId: z.string().uuid(),
 	})
 	.strict();
 
-const shareLinkForBoardRequestParams = z
+export const shareLinkForBoardRequestParams = z
 	.object({
 		boardId: z.string().uuid(),
 	})
 	.strict();
-export const ShareLinkRequestValidationSchema: ZodValidationSchema = {
-	params: shareLinkForProjectRequestParams || shareLinkForBoardRequestParams,
+
+export const ShareLinkRequestValidationSchemaProject: ZodValidationSchema = {
+	params: shareLinkForProjectRequestParams,
 	body: shareLinkBodyRequestSchema,
 };
-export const ShareLinkRequestSchema = {
-	params: shareLinkForProjectRequestParams || shareLinkForBoardRequestParams,
+
+export const ShareLinkRequestValidationSchemaBoard: ZodValidationSchema = {
+	params: shareLinkForBoardRequestParams,
+	body: shareLinkBodyRequestSchema,
+};
+
+export const ShareLinkRequestValidationSchema: ZodValidationSchema = {
+	params: z.union([shareLinkForProjectRequestParams, shareLinkForBoardRequestParams]),
+	body: shareLinkBodyRequestSchema,
+};
+
+export const ShareLinkRequestSchemaProject = {
+	params: shareLinkForProjectRequestParams,
+	body: {
+		description: 'Share Link Body',
+		content: {
+			'application/json': {
+				schema: shareLinkBodyRequestSchema,
+			},
+		},
+	},
+};
+
+export const ShareLinkRequestSchemaBoard = {
+	params: shareLinkForBoardRequestParams,
 	body: {
 		description: 'Share Link Body',
 		content: {

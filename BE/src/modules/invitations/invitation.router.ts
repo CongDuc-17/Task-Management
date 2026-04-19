@@ -18,10 +18,11 @@ import { ProjectPermissionEnum, BoardPermissionEnum } from '@/common/enums/permi
 import {
 	TokenInvitationRequestSchema,
 	TokenRequestValidationSchema,
+	ShareLinkRequestValidationSchemaProject,
+	ShareLinkRequestValidationSchemaBoard,
+	ShareLinkRequestSchemaProject,
+	ShareLinkRequestSchemaBoard,
 } from './dtos/requests';
-import { GetProjectByIdRequestSchema } from '../projects/dtos/requests/getProjectById.request';
-import { GetBoardByIdRequestSchema } from '../boards/dtos';
-import { ShareLinkRequestSchema } from './dtos/requests/shareLink.request';
 const invitationController = new InvitationController();
 
 export const invitationsRegistry = new OpenAPIRegistry();
@@ -65,7 +66,7 @@ invitationsRegistry.registerPath({
 	method: 'post',
 	path: '/invitations/projects/{projectId}/share-link',
 	tags: ['Invitations'],
-	request: ShareLinkRequestSchema,
+	request: ShareLinkRequestSchemaProject,
 	responses: createApiResponse(InvitationsResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 
@@ -73,7 +74,7 @@ router.post(
 	'/projects/:projectId/share-link',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.INVITE_MEMBER),
-	//validateRequestMiddleware(TokenRequestValidationSchema),
+	validateRequestMiddleware(ShareLinkRequestValidationSchemaProject),
 	invitationController.createShareLinkForProject,
 );
 
@@ -81,14 +82,14 @@ invitationsRegistry.registerPath({
 	method: 'post',
 	path: '/invitations/boards/{boardId}/share-link',
 	tags: ['Invitations'],
-	request: ShareLinkRequestSchema,
+	request: ShareLinkRequestSchemaBoard,
 	responses: createApiResponse(InvitationsResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/boards/:boardId/share-link',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.INVITE_MEMBER),
-	//validateRequestMiddleware(TokenRequestValidationSchema),
+	validateRequestMiddleware(ShareLinkRequestValidationSchemaBoard),
 	invitationController.createShareLinkForBoard,
 );
 
