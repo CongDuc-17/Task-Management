@@ -45,13 +45,13 @@ export class AuthController {
 	}
 
 	// Redirect to Google OAuth
-	async googleAuth(): Promise<void> {
+	googleAuth = (req: Request, res: Response, next: NextFunction) => {
 		passport.authenticate('google', {
-			scope: ['profile', 'email'],
-			accessType: 'offline',
-			prompt: 'consent',
-		});
-	}
+			scope: ['profile', 'email'],  // Yêu cầu quyền lấy tên + email
+			accessType: 'offline',		  // Yêu cầu refresh token
+			prompt: 'consent',				 // Bắt user chọn tài khoản lần nữa
+		})(req, res, next);
+	};
 
 	// Handle Google OAuth callback
 	googleCallback = (

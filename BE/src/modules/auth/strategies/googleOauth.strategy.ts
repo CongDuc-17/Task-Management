@@ -10,6 +10,7 @@ import { AuthRepository } from '../auth.repository';
 import { InternalServerException, OptionalException } from '@/common';
 import { GoogleOauthConfig } from '@/configs';
 import { socialAccountsWithPartialRelations } from '@/models';
+import { error } from 'console';
 
 export class GoogleOauthStrategy {
 	constructor(
@@ -39,6 +40,16 @@ export class GoogleOauthStrategy {
 		done: VerifyCallback,
 	): Promise<void> {
 		try {
+			const email = profile.emails?.[0]?.value;
+			if (!email) {
+				return done(
+					new OptionalException(
+						StatusCodes.BAD_REQUEST,
+						'Google account has no email',
+					),
+					false,
+				);
+			}
 			const user = {
 				googleId: profile.id,
 				email: profile.emails?.[0]?.value || '',
@@ -94,14 +105,26 @@ export class GoogleOauthStrategy {
 							},
 						},
 					});
+				} else {
+					socialAccount = await this.authRepository.updateSocialAccount({
+						googleId: user.googleId,
+						googleAccessToken: accessToken,
+						googleRefreshToken:
+							refreshToken ?? socialAccount.googleRefreshToken,
+					});
 				}
 			}
 
-			done(null, {
-				socialAccountInformation: socialAccount,
-			});
-		} catch {
-			throw new InternalServerException();
+			if (!socialAccount) {
+				return done(new InternalServerException(), false);
+			}
+
+			return done(null, { socialAccountInformation: socialAccount });
+		} catch (err) {
+			return done(
+				error instanceof Error ? error : new InternalServerException(),
+				false,
+			);
 		}
 	}
 }

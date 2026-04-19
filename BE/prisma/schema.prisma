@@ -120,7 +120,7 @@ model socialAccounts {
   id                 String @id @default(uuid())
   userId             String @unique @map("user_id")
   user               users  @relation(fields: [userId], references: [id])
-  googleId           String @map("google_id")
+  googleId           String @map("google_id") @unique
   googleAccessToken  String @map("google_access_token")
   googleRefreshToken String @map("google_refresh_token")
 
@@ -241,6 +241,7 @@ model boards {
   updatedAt   DateTime        @updatedAt @map("updated_at")
   deletedAt   DateTime?       @map("deleted_at")
   status      BoardStatusEnum @default(ACTIVE)
+  background   String?         
 
   boardMembers boardMembers[]
   invitation   invitations[]  @relation("BoardInvitation")
