@@ -117,6 +117,25 @@ export class AuthRepository {
 		});
 	}
 
+	async updateSocialAccount({
+		googleId,
+		googleAccessToken,
+		googleRefreshToken,
+	}: {
+		googleId: string;
+		googleAccessToken: string;
+		googleRefreshToken?: string;
+	}): Promise<socialAccountsWithPartialRelations> {
+		return this.prismaService.socialAccounts.update({
+			include: { user: true },
+			where: { googleId },
+			data: {
+				googleAccessToken,
+				...(googleRefreshToken && { googleRefreshToken }),
+			},
+		});
+	}
+
 	async getLatestToken(userId: string): Promise<tokens | null> {
 		return this.prismaService.tokens.findFirst({
 			where: { userId },

@@ -35,6 +35,10 @@ export function startTokenCleanupScheduler(intervalHours: number = 1): void {
 		return;
 	}
 
+	if (!Number.isFinite(intervalHours) || intervalHours <= 0) {
+		throw new Error('[Token Cleanup] intervalHours must be a positive number');
+	}
+
 	const intervalMs = intervalHours * 60 * 60 * 1000;
 	cleanupInterval = setInterval(cleanupExpiredTokens, intervalMs);
 	console.log(`[Token Cleanup] Scheduler bắt đầu (mỗi ${intervalHours} giờ)`);
