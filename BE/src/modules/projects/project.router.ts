@@ -25,6 +25,7 @@ import { UpdateRoleMemberProjectRequestSchema } from './dtos/requests';
 import { boardResponseDtoSchema, CreateBoardRequestSchema } from '../boards/dtos';
 import { BoardsController } from '../boards/boards.controller';
 import z from 'zod';
+import { uploadAvatarMiddleware } from '@/common/middlewares/upload.middleware';
 const projectsController = new ProjectsController();
 const boardsController = new BoardsController();
 export const projectsRegistry = new OpenAPIRegistry();
@@ -162,6 +163,7 @@ router.post(
 	'/:projectId/boards',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(BoardPermissionEnum.CREATE_BOARD),
+
 	boardsController.createBoard,
 );
 

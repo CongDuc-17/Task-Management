@@ -23,6 +23,7 @@ export class ProjectMembersRepository {
 								id: true,
 								name: true,
 								description: true,
+								background: true,
 								status: true,
 							},
 						},

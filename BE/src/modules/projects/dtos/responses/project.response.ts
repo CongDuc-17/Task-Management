@@ -4,12 +4,14 @@ export class BoardDto {
 	id: string;
 	name: string;
 	description?: string;
+	background?: string;
 	status: string;
 
 	constructor(data: any) {
 		this.id = data.id;
 		this.name = data.name;
 		this.description = data.description;
+		this.background = data.background;
 		this.status = data.status;
 	}
 }
@@ -18,6 +20,7 @@ const boardDtoSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
+	background: z.string().optional(),
 	status: z.string(),
 });
 

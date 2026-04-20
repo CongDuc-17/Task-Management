@@ -1,4 +1,3 @@
-import { boardMembers } from './../../models/modelSchema/boardMembersSchema';
 import {
 	HttpResponseBodySuccessDto,
 	InternalServerException,
@@ -23,6 +22,11 @@ import {
 import { BoardRoleEnum } from '@/common/enums/roles';
 import { ProjectsRepository } from '../projects/project.repository';
 import { ProjectMembersRepository } from '../projectMembers/projectMember.repository';
+import {
+	deleteImageFromCloudinary,
+	extractPublicIdFromUrl,
+	uploadImageFromBuffer,
+} from '@/common/utils/cloudinary.utils';
 
 export class BoardsService {
 	constructor(
@@ -78,6 +82,7 @@ export class BoardsService {
 			data: new BoardResponseDto({
 				...boardWithMembers,
 				description: boardWithMembers.description ?? undefined,
+				background: boardWithMembers.background ?? undefined,
 			}),
 		};
 	}
@@ -103,6 +108,7 @@ export class BoardsService {
 				new BoardResponseDto({
 					...board,
 					description: board.description ?? undefined,
+					background: board.background ?? undefined,
 				}),
 		);
 		return {
@@ -123,6 +129,7 @@ export class BoardsService {
 			data: new BoardResponseDto({
 				...board,
 				description: board.description ?? undefined,
+				background: board.background ?? undefined,
 			}),
 		};
 	}
@@ -148,8 +155,56 @@ export class BoardsService {
 			data: new BoardResponseDto({
 				...updatedBoard,
 				description: updatedBoard.description ?? undefined,
+				background: updatedBoard.background ?? undefined,
 			}),
 		};
+	}
+
+	async uploadBackground(
+		boardId: string,
+		file: Express.Multer.File,
+	): Promise<HttpResponseBodySuccessDto<BoardResponseDto>> {
+		let uploadBackground: any = null;
+		const board = await this.boardsRepository.getBoardById(boardId);
+		if (!board) {
+			throw new NotFoundException('Board not found');
+		}
+
+		try {
+			if (file) {
+				uploadBackground = await uploadImageFromBuffer(
+					file.buffer,
+					file.mimetype,
+					`TrelloLike_BoardBackgrounds`,
+				);
+				if (board.background) {
+					const oldPublic = extractPublicIdFromUrl(board.background);
+					if (oldPublic) {
+						await deleteImageFromCloudinary(oldPublic);
+					}
+				}
+
+				board.background = uploadBackground.secure_url;
+				await this.boardsRepository.updateBoard(boardId, {
+					background: board.background,
+				});
+			}
+
+			return {
+				success: true,
+				data: new BoardResponseDto({
+					...board,
+					description: board.description ?? undefined,
+					background: board.background ?? undefined,
+				}),
+			};
+		} catch (error) {
+			console.log('Error occurred while uploading background:', error);
+			if (uploadBackground && uploadBackground.public_id) {
+				await deleteImageFromCloudinary(uploadBackground.public_id);
+			}
+			throw new InternalServerException();
+		}
 	}
 
 	async archiveBoard(boardId: string): Promise<HttpResponseBodySuccessDto<null>> {
