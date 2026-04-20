@@ -8,11 +8,16 @@ import { projects } from '@/models';
 export class ProjectsRepository {
 	constructor(private readonly prismaService = new PrismaService()) {}
 
-	async createProject(name: string, description?: string): Promise<projects> {
+	async createProject(
+		name: string,
+		description?: string,
+		background?: string,
+	): Promise<projects> {
 		return this.prismaService.projects.create({
 			data: {
 				name,
 				description,
+				background,
 			},
 		});
 	}
@@ -45,6 +50,7 @@ export class ProjectsRepository {
 						id: true,
 						name: true,
 						description: true,
+						background: true,
 						status: true,
 					},
 				},

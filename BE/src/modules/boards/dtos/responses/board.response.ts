@@ -39,6 +39,7 @@ export class BoardResponseDto {
 	projectId: string;
 	memberCount: number;
 	members?: BoardMemberDto[];
+	background?: string;
 
 	constructor(data: {
 		id: string;
@@ -47,11 +48,13 @@ export class BoardResponseDto {
 		projectId: string;
 		_count?: { boardMembers: number };
 		boardMembers?: any[];
+		background?: string;
 	}) {
 		this.id = data.id;
 		this.name = data.name;
 		this.description = data.description;
 		this.projectId = data.projectId;
+		this.background = data.background;
 		this.memberCount = data._count?.boardMembers ?? 0;
 		this.members = data.boardMembers?.map((member) => new BoardMemberDto(member));
 	}
@@ -76,6 +79,7 @@ const boardMemberDtoSchema = z.object({
 export const boardResponseDtoSchema = z.object({
 	id: z.string(),
 	name: z.string(),
+	background: z.string().optional(),
 	description: z.string().optional(),
 	projectId: z.string(),
 	memberCount: z.number(),

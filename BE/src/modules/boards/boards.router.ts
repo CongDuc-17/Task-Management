@@ -30,6 +30,8 @@ import {
 } from '../labels/dtos/requests';
 import { LabelResponseDtoSchema } from '../labels/dtos/responses';
 import { LabelsController } from '../labels/labels.controller';
+import { UploadBackgroundRequestSchema } from './dtos/requests/uploadBackground.request';
+import { uploadAvatarMiddleware } from '@/common/middlewares/upload.middleware';
 
 const boardsController = new BoardsController();
 const listsController = new ListsController();
@@ -68,6 +70,7 @@ router.patch(
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
 	boardsController.updateBoardInformation,
 );
+
 boardsRegistry.registerPath({
 	method: 'delete',
 	path: '/boards/{boardId}',
@@ -188,6 +191,21 @@ router.post(
 	authMiddleware.verifyAccessToken,
 	validateRequestMiddleware(createLabelRequestValidationSchema),
 	labelsController.createLabel,
+);
+
+boardsRegistry.registerPath({
+	method: 'post',
+	path: '/boards/{boardId}/background',
+	tags: ['Boards'],
+	request: UploadBackgroundRequestSchema,
+	responses: createApiResponse(boardResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.post(
+	'/:boardId/background',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
+	uploadAvatarMiddleware.single('background'),
+	boardsController.uploadBackground,
 );
 
 export const boardsRouter = router;

@@ -79,7 +79,7 @@ export class UsersController {
 		} catch (error) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				success: false,
-				message: error.message || 'Lỗi server',
+				message: 'Lỗi server',
 			});
 		}
 	}

@@ -1,7 +1,6 @@
 import z, { optional } from 'zod';
 
 import { ZodValidationSchema } from '@/common';
-import { de } from 'zod/v4/locales';
 
 export class UpdateMyInformationRequestDto {
 	name?: string;
