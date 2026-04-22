@@ -15,12 +15,7 @@ import {
   KanbanBoardColumnFooter,
   type KanbanBoardDropDirection,
 } from "@/components/kanban";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/layout/SideBar";
+
 import { useLists } from "@/hooks/useLists";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
@@ -380,7 +375,17 @@ export function Board() {
 
   return (
     <>
-      <div className="flex flex-col h-full w-full overflow-hidden">
+      <div
+        className="flex flex-col h-full w-full overflow-hidden "
+        style={
+          board?.background
+            ? {
+                backgroundImage: `url(${board.background})`,
+                backgroundSize: "cover",
+              }
+            : {}
+        }
+      >
         <HeaderBoard
           boardId={boardId}
           boardName={board?.name}

@@ -116,7 +116,7 @@ export function ChangePassword() {
               <Button variant="outline">Cancel</Button>
             </DialogClose>
             <Button
-              type="submit"
+              type="button"
               onClick={() => handleSaveChanges()}
               disabled={isSaving}
             >

@@ -14,6 +14,7 @@ import { CardLabelsRepository } from '../cardLabels/cardLabels.repository';
 import { CardBasicResponseDto, CardWithIncludesResponseDto } from './dtos';
 import { UsersRepository } from '../users/users.repository';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BoardRoleEnum } from '@/common/enums/roles';
 
 export class CardsService {
 	constructor(
@@ -290,6 +291,13 @@ export class CardsService {
 			throw new NotFoundException('User is not a member of the board');
 		}
 
+		if (isMember.role.name === BoardRoleEnum.BOARD_VIEWER) {
+			throw new Exception(
+				403,
+				'User does not have permission to be assigned to card',
+			);
+		}
+
 		const duplicateAdd = await this.cardMembersRepository.findMemberOnCard(
 			cardId,
 			userId,
@@ -364,7 +372,6 @@ export class CardsService {
 				throw new Exception(500, 'Failed to remove member from card');
 			}
 
-			
 			return {
 				success: true,
 				data: null,

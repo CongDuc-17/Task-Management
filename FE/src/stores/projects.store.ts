@@ -12,6 +12,8 @@ interface Board {
   id: string;
   name: string;
   description?: string;
+  background?: string;
+  members?: Member[];
 }
 
 interface Member {

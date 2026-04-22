@@ -28,12 +28,19 @@ export class BoardMembersRepository {
 		});
 	}
 
-	async isUserMemberOfBoard(boardId: string, userId: string): Promise<boolean> {
+	async isUserMemberOfBoard(boardId: string, userId: string) {
 		const m = await this.prisma.boardMembers.findFirst({
 			where: { boardId, userId },
-			select: { id: true },
+			include: {
+				role: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
 		});
-		return !!m;
+		return m;
 	}
 
 	async getBoardMembers(boardId: string) {
@@ -65,6 +72,10 @@ export class BoardMembersRepository {
 		});
 	}
 	async removeMember(boardId: string, userId: string) {
+		await this.prisma.cardMembers.deleteMany({
+			where: { userId },
+		});
+
 		return this.prisma.boardMembers.deleteMany({
 			where: { boardId, userId },
 		});

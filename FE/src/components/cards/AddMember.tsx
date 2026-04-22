@@ -33,7 +33,7 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
   console.log("Card members in AddMember component:", membersCard);
   async function handleAddMemberToCard(memberId: string) {
     try {
-      const response = await apiClient.post(`/cards/${cardId}/members`, {
+      await apiClient.post(`/cards/${cardId}/members`, {
         userId: memberId,
       });
 
@@ -46,7 +46,7 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
           avatar: memberToAdd.user.avatar,
         };
 
-        addMember(cardId, newMember); // Cập nhật ngay trong store để UI phản hồi nhanh
+        addMember(cardId, newMember);
       }
     } catch (error) {
       console.error("Error adding member to card:", error);
@@ -55,12 +55,9 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
 
   async function handleRemoveMemberFromCard(memberId: string) {
     try {
-      const response = await apiClient.delete(
-        `/cards/${cardId}/members/${memberId}`,
-      );
+      await apiClient.delete(`/cards/${cardId}/members/${memberId}`);
 
-      // onUpdateMembers("remove", { userId: memberId });
-      removeMember(cardId, memberId); // Cập nhật ngay trong store để UI phản hồi nhanh
+      removeMember(cardId, memberId);
     } catch (error) {
       console.error("Error removing member from card:", error);
     }

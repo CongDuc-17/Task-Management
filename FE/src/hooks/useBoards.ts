@@ -6,6 +6,7 @@ type Board = {
   id: string;
   name: string;
   description?: string;
+  background?: string;
   members?: string[];
 };
 
@@ -19,7 +20,7 @@ export const useBoards = () => {
 
   async function createBoard(
     projectId: string,
-    data: { name: string; description?: string },
+    data: { name: string; description?: string; background?: string },
   ) {
     try {
       setLoading(true);
