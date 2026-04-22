@@ -18,6 +18,18 @@ import {
 	NotificationTypeEnum,
 } from './notifications.constants';
 import { NotificationsRepository } from './notifications.repository';
+import { NotificationsSocketService } from './notifiactions.socket.service';
+
+interface CreateNotificationPayload {
+	recipientUserId: string;
+	actorId?: string;
+	type: NotificationTypeEnum;
+	title: string;
+	content: string;
+	entityType: NotificationEntityTypeEnum;
+	entityId: string;
+	metadata?: Prisma.InputJsonValue;
+}
 
 interface NotifyCardAssignedInput {
 	recipientUserId: string;
@@ -28,10 +40,26 @@ interface NotifyCardAssignedInput {
 	boardId: string;
 	listId: string;
 }
+interface NotifyProjectInvitedInput {
+	recipientUserId: string;
+	actorId?: string;
+	actorName: string;
+	projectId: string;
+	projectName: string;
+}
+
+interface NotifyBoardInvitedInput {
+	recipientUserId: string;
+	actorId?: string;
+	actorName: string;
+	boardId: string;
+	boardName: string;
+}
 
 export class NotificationsService {
 	constructor(
 		private readonly notificationsRepository: NotificationsRepository = new NotificationsRepository(),
+		private readonly notificationsSocketService: NotificationsSocketService = new NotificationsSocketService(),
 	) {}
 
 	async getMyNotifications(
@@ -100,13 +128,77 @@ export class NotificationsService {
 		};
 	}
 
-	async notifyCardAssigned(input: NotifyCardAssignedInput): Promise<Notifications> {
+	private async createNotification(
+		payload: CreateNotificationPayload,
+	): Promise<Notifications> {
 		const data: Prisma.NotificationsCreateInput = {
 			user: {
 				connect: {
-					id: input.recipientUserId,
+					id: payload.recipientUserId,
 				},
 			},
+			actorId: payload.actorId,
+			type: payload.type,
+			title: payload.title,
+			content: payload.content,
+			entityType: payload.entityType,
+			entityId: payload.entityId,
+			metadata: payload.metadata,
+		};
+
+		const notification = await this.notificationsRepository.createOne(data);
+		const unreadCount = await this.notificationsRepository.countUnreadByUserId(
+			payload.recipientUserId,
+		);
+
+		this.notificationsSocketService.emitNewNotification(
+			payload.recipientUserId,
+			new NotificationResponseDto(notification),
+		);
+
+		this.notificationsSocketService.emitUnreadCount(
+			payload.recipientUserId,
+			unreadCount,
+		);
+		return notification;
+	}
+
+	async notifyProjectInvited(input: NotifyProjectInvitedInput): Promise<Notifications> {
+		return this.createNotification({
+			recipientUserId: input.recipientUserId,
+			actorId: input.actorId,
+			type: NotificationTypeEnum.PROJECT_INVITED,
+			title: 'You were invited to a project',
+			content: `${input.actorName} invited you to project ${input.projectName}`,
+			entityType: NotificationEntityTypeEnum.PROJECT,
+			entityId: input.projectId,
+			metadata: {
+				projectId: input.projectId,
+				projectName: input.projectName,
+				actorName: input.actorName,
+			},
+		});
+	}
+	async notifyBoardInvited(input: NotifyBoardInvitedInput): Promise<Notifications> {
+		return this.createNotification({
+			recipientUserId: input.recipientUserId,
+			actorId: input.actorId,
+			type: NotificationTypeEnum.BOARD_INVITED,
+			title: 'You were invited to a board',
+			content: `${input.actorName} invited you to board ${input.boardName}`,
+			entityType: NotificationEntityTypeEnum.BOARD,
+			entityId: input.boardId,
+			metadata: {
+				boardId: input.boardId,
+				boardName: input.boardName,
+				actorName: input.actorName,
+			},
+		});
+	}
+
+	async notifyCardAssigned(input: NotifyCardAssignedInput): Promise<Notifications> {
+		return this.createNotification({
+			recipientUserId: input.recipientUserId,
 			actorId: input.actorId,
 			type: NotificationTypeEnum.CARD_ASSIGNED,
 			title: 'You were assigned to a card',
@@ -120,16 +212,6 @@ export class NotificationsService {
 				cardTitle: input.cardTitle,
 				actorName: input.actorName,
 			},
-		};
-
-		const notification = await this.notificationsRepository.createOne(data);
-
-		// Sau này chỗ này có thể emit socket:
-		// await this.notificationsSocketService.emitNewNotification(
-		//   input.recipientUserId,
-		//   new NotificationResponseDto(notification),
-		// );
-
-		return notification;
+		});
 	}
 }
