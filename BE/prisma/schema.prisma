@@ -102,6 +102,7 @@ model users {
   cardAttachments cardAttachments[]
   cardActivity    cardActivity[]
   invitations     invitations[]
+  notifications   Notifications[]
 
   @@map("Users")
 }
@@ -421,4 +422,41 @@ model invitations {
 
   @@index([email, status])
   @@map("Invitations")
+}
+
+
+enum NotificationTypeEnum {
+  BOARD_INVITED
+  PROJECT_INVITED
+  CARD_ASSIGNED
+  CARD_COMMENTED
+  CARD_DUE_SOON
+}
+
+enum NotificationEntityTypeEnum {
+  PROJECT
+  BOARD
+  CARD
+  INVITATION
+}
+
+model Notifications {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        users    @relation(fields: [userId], references: [id])
+
+  actorId     String?  @map("actor_id")
+  type        NotificationTypeEnum
+  title       String
+  content     String
+  entityType  NotificationEntityTypeEnum? @map("entity_type")
+  entityId    String?  @map("entity_id")
+  metadata    Json?
+  isRead      Boolean  @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+  @@map("Notifications")
 }

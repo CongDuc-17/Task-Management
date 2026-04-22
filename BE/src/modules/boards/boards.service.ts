@@ -27,6 +27,7 @@ import {
 	extractPublicIdFromUrl,
 	uploadImageFromBuffer,
 } from '@/common/utils/cloudinary.utils';
+import { UploadApiResponse } from 'cloudinary';
 
 export class BoardsService {
 	constructor(
@@ -164,30 +165,27 @@ export class BoardsService {
 		boardId: string,
 		file: Express.Multer.File,
 	): Promise<HttpResponseBodySuccessDto<BoardResponseDto>> {
-		let uploadBackground: any = null;
+		let uploaded: UploadApiResponse | null = null;
 		const board = await this.boardsRepository.getBoardById(boardId);
 		if (!board) {
 			throw new NotFoundException('Board not found');
 		}
 
 		try {
-			if (file) {
-				uploadBackground = await uploadImageFromBuffer(
-					file.buffer,
-					file.mimetype,
-					`TrelloLike_BoardBackgrounds`,
-				);
-				if (board.background) {
-					const oldPublic = extractPublicIdFromUrl(board.background);
-					if (oldPublic) {
-						await deleteImageFromCloudinary(oldPublic);
-					}
-				}
-
-				board.background = uploadBackground.secure_url;
-				await this.boardsRepository.updateBoard(boardId, {
-					background: board.background,
-				});
+			uploaded = await uploadImageFromBuffer(
+				file.buffer,
+				file.mimetype,
+				'TrelloLike_BoardBackgrounds',
+			);
+			const oldPublicId = board.background
+				? extractPublicIdFromUrl(board.background)
+				: null;
+			board.background = uploaded.secure_url;
+			await this.boardsRepository.updateBoard(boardId, {
+				background: board.background,
+			});
+			if (oldPublicId) {
+				await deleteImageFromCloudinary(oldPublicId);
 			}
 
 			return {
@@ -199,9 +197,9 @@ export class BoardsService {
 				}),
 			};
 		} catch (error) {
-			console.log('Error occurred while uploading background:', error);
-			if (uploadBackground && uploadBackground.public_id) {
-				await deleteImageFromCloudinary(uploadBackground.public_id);
+			console.error('Error occurred while uploading background:', error);
+			if (uploaded?.public_id) {
+				await deleteImageFromCloudinary(uploaded.public_id);
 			}
 			throw new InternalServerException();
 		}
