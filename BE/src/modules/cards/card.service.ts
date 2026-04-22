@@ -12,6 +12,8 @@ import { LabelsRepository } from '../labels/labels.repository';
 import { CardMembersRepository } from '../cardMembers/cardMembers.repository';
 import { CardLabelsRepository } from '../cardLabels/cardLabels.repository';
 import { CardBasicResponseDto, CardWithIncludesResponseDto } from './dtos';
+import { UsersRepository } from '../users/users.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class CardsService {
 	constructor(
@@ -21,6 +23,8 @@ export class CardsService {
 		private readonly labelsRepository: LabelsRepository = new LabelsRepository(),
 		private readonly cardMembersRepository: CardMembersRepository = new CardMembersRepository(),
 		private readonly cardLabelsRepository: CardLabelsRepository = new CardLabelsRepository(),
+		private readonly usersRepository: UsersRepository = new UsersRepository(),
+		private readonly notificationsService: NotificationsService = new NotificationsService(),
 	) {}
 
 	async getAllCardsByListId(
@@ -272,6 +276,7 @@ export class CardsService {
 	async addMemberToCard(
 		cardId: string,
 		userId: string,
+		currentUserId: string,
 	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
 		const card = await this.cardsRepository.getCardById(cardId);
 		if (!card) throw new NotFoundException('Card not found');
@@ -297,6 +302,24 @@ export class CardsService {
 			cardId,
 			userId,
 		);
+		const actor = await this.usersRepository.findUser({
+			userId: currentUserId,
+		});
+		if (!actor) {
+			throw new NotFoundException('Actor not found');
+		}
+
+		if (userId !== currentUserId) {
+			await this.notificationsService.notifyCardAssigned({
+				recipientUserId: userId,
+				actorId: currentUserId,
+				actorName: actor.name,
+				cardId: card.id,
+				cardTitle: card.title,
+				boardId: list.boardId,
+				listId: card.listId,
+			});
+		}
 		return {
 			success: true,
 			data: addedMember,

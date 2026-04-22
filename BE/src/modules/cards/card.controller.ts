@@ -81,32 +81,6 @@ export class CardsController {
 		return new HttpResponseDto().success<any>(result);
 	}
 
-	// async updateInformationCard(req: Request): Promise<Response> {
-	// 	try {
-	// 		const { cardId } = req.params as { cardId: string };
-	// 		const { title, description, members, dueDate } = req.body;
-	// 		const user = req.user as { id: string };
-
-	// 		const result = await this.cardsService.updateInformationCard(
-	// 			cardId,
-	// 			user.id,
-	// 			title,
-	// 			description,
-	// 			members,
-	// 			dueDate,
-	// 		);
-	// 		if (result instanceof Exception) {
-	// 			return new HttpResponseDto().exception(result);
-	// 		}
-	// 		return new HttpResponseDto().success<any>(result);
-	// 	} catch (error) {
-	// 		console.error('[CardsController] updateInformationCard error:', error);
-	// 		return new HttpResponseDto().exception(
-	// 			new Exception(500, 'Internal Server Error'),
-	// 		);
-	// 	}
-	// }
-
 	async softDeleteCard(req: Request): Promise<Response> {
 		const { cardId } = req.params as { cardId: string };
 		const user = req.user as { id: string };
@@ -140,7 +114,8 @@ export class CardsController {
 	async addMemberToCard(req: Request): Promise<Response> {
 		const { cardId } = req.params as { cardId: string };
 		const { userId } = req.body;
-		const result = await this.cardsService.addMemberToCard(cardId, userId);
+		const user = req.user as { id: string };
+		const result = await this.cardsService.addMemberToCard(cardId, userId, user.id);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
