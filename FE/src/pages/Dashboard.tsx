@@ -6,16 +6,15 @@ import { useProjects } from "@/hooks/useProjects";
 import { Trello, EllipsisVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CreateBoard } from "@/components/boards/CreateBoard";
+import { Notifications } from "@/components/Notifications";
 export function Dashboard() {
   const { projects, loading, error } = useProjects();
-  console.log("Projects in Dashboard:", projects);
 
   return (
     <>
-      <div className="sticky top-0 z-10 shadow-md flex justify-between items-center px-4 py-2">
+      <div className="sticky  w-full top-0 z-10 shadow-md flex justify-between    items-center px-4 py-2 pr-12">
         <h1 className="text-2xl font-bold p-4 ">Dashboard</h1>
-
-        <hr />
+        <Notifications />
       </div>
       <main className=" h-screen overflow-y-auto">
         <div className="p-8 flex justify-between items-center">

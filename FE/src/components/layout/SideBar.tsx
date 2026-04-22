@@ -22,16 +22,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { Folder } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { useUserStore } from "@/stores/user.store";
+import { apiClient } from "@/lib/apiClient";
 
 export function AppSidebar() {
   const { projects, loading, error } = useProjects();
 
   const { user } = useUserStore();
-
+  const handleLogout = async () => {
+    try {
+      await apiClient.post("/auth/logout");
+      Navigate({ to: "/login", replace: true });
+    } catch (error) {
+      console.log(error);
+    }
+  };
   return (
     <Sidebar collapsible="icon" className="group/sidebar">
       <SidebarHeader className="relative">
@@ -123,6 +131,7 @@ export function AppSidebar() {
                 <Button
                   variant="ghost"
                   className="w-full border-none flex justify-start items-center gap-2 "
+                  onClick={() => handleLogout()}
                 >
                   <span className="text-red-500">Sign Out</span>
                 </Button>

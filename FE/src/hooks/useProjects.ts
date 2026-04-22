@@ -11,7 +11,6 @@ export const useProjects = () => {
       setLoading(true);
       const response = await apiClient.get("/projects");
 
-      console.log("Fetched projects:", response.data);
       setProjects(response.data);
       setLoading(false);
       setError(null);
