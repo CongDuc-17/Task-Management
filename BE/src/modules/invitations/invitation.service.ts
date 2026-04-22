@@ -23,6 +23,7 @@ import { StatusCodes } from 'http-status-codes/build/cjs/status-codes';
 import { randomBytes } from 'crypto';
 import { InvitationStatusEnum } from '@prisma/client';
 import { startsWith } from 'zod';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class InvitationService {
 	constructor(
@@ -34,6 +35,7 @@ export class InvitationService {
 		private readonly projectRepository = new ProjectsRepository(),
 		private readonly boardsRepository = new BoardsRepository(),
 		private readonly mailsService = new MailsService(),
+		private readonly notificationService: NotificationsService = new NotificationsService(),
 	) {}
 
 	async inviteUserToProject(
@@ -53,6 +55,10 @@ export class InvitationService {
 		}
 		if (!role.name.startsWith('PROJECT_')) {
 			throw new ConflictException('Role is not a project role');
+		}
+		const actor = await this.usersRepository.findUser({ userId: inviterId });
+		if (!actor) {
+			throw new NotFoundException('Inviter not found');
 		}
 		if (existingUser) {
 			const existingMember =
@@ -81,6 +87,13 @@ export class InvitationService {
 			// 	html: `You have been added to a project ${project.title}. Please log in to your account to access the project.`,
 			// });
 			// notification logic can be added here
+			await this.notificationService.notifyProjectInvited({
+				recipientUserId: existingUser.id,
+				actorId: inviterId,
+				actorName: actor.name,
+				projectId,
+				projectName: project.name,
+			});
 
 			return {
 				success: true,
@@ -116,17 +129,6 @@ export class InvitationService {
 				inviterId,
 				expiresAt,
 			});
-			// email sending logic can be added here
-			// await this.mailsService.sendEmail({
-			// 	recipients: [
-			// 		{
-			// 			address: email,
-			// 			name: 'User',
-			// 		},
-			// 	],
-			// 	subject: 'You are invited to join a project',
-			// 	html: `You have been invited to join a project. Please use the following token to accept the invitation: <a href="http://localhost:5173/S-Group-Trello/register">Accept Invitation</a>. This invitation is valid until ${expiresAt.toDateString()}.`,
-			// });
 
 			return {
 				success: true,
@@ -159,6 +161,11 @@ export class InvitationService {
 		if (!role.name.startsWith('BOARD_')) {
 			throw new ConflictException('Role is not a board role');
 		}
+		const actor = await this.usersRepository.findUser({ userId: inviterId });
+		if (!actor) {
+			throw new NotFoundException('Inviter not found');
+		}
+
 		const existingUser = await this.usersRepository.findUser({ email });
 
 		if (existingUser) {
@@ -176,17 +183,13 @@ export class InvitationService {
 				roleId,
 			);
 
-			// notification logic can be added here
-			// await this.mailsService.sendEmail({
-			// 	recipients: [
-			// 		{
-			// 			address: email,
-			// 			name: 'User',
-			// 		},
-			// 	],
-			// 	subject: 'You have been added to a board',
-			// 	html: `You have been added to a board. Please log in to your account to access the board.`,
-			// });
+			await this.notificationService.notifyBoardInvited({
+				recipientUserId: existingUser.id,
+				actorId: inviterId,
+				actorName: actor.name,
+				boardId,
+				boardName: board.name,
+			});
 			return {
 				success: true,
 				data: new InvitationResponseDto({

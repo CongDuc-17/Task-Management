@@ -15,6 +15,8 @@ import {
 	setCookieMiddleware,
 } from './common';
 import { startTokenCleanupScheduler } from './common/utils/tokenCleanup.util';
+import { createServer } from 'http';
+import { createWebSocketServer } from './socket/socket.server';
 
 const app: Express = express();
 
@@ -53,10 +55,13 @@ app.use(errorHandlerMiddleware);
 
 app.use(openAPIRouter);
 
+const httpServer = createServer(app);
+
+createWebSocketServer(httpServer);
 // Start token cleanup scheduler (chạy mỗi 1 giờ)
 startTokenCleanupScheduler(1);
 
-app.listen(appEnv.PORT, () => {
+httpServer.listen(appEnv.PORT, () => {
 	const { NODE_ENV, HOST, PORT } = appEnv;
 	console.log(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}/api`);
 });

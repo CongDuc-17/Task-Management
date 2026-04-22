@@ -361,15 +361,10 @@ export class CardsService {
 			);
 
 			if (result.count === 0) {
-				console.error(
-					`[CardsService] Failed to remove member ${userId} from card ${cardId}`,
-				);
 				throw new Exception(500, 'Failed to remove member from card');
 			}
 
-			console.log(
-				`[CardsService] Successfully removed member ${userId} from card ${cardId}`,
-			);
+			
 			return {
 				success: true,
 				data: null,
