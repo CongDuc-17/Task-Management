@@ -37,6 +37,7 @@ export const useBoards = () => {
       console.error("Failed to create board", error);
       setLoading(false);
       setError(error);
+      throw error;
     }
   }
 

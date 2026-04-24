@@ -7,11 +7,14 @@ import { Trello, EllipsisVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CreateBoard } from "@/components/boards/CreateBoard";
 import { Notifications } from "@/components/Notifications";
+import { Toaster } from "@/components/ui/sonner";
+
 export function Dashboard() {
   const { projects, loading, error } = useProjects();
 
   return (
     <>
+      <Toaster position="top-right" />
       <div className="sticky  w-full top-0 z-10 shadow-md flex justify-between    items-center px-4 py-2 pr-12">
         <h1 className="text-2xl font-bold p-4 ">Dashboard</h1>
         <Notifications />
@@ -41,6 +44,7 @@ export function Dashboard() {
 
           {!loading &&
             !error &&
+            projects.length > 0 &&
             projects.map((project) => (
               <div key={project.id}>
                 <div className="flex justify-between items-start mr-8">

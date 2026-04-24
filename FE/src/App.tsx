@@ -11,12 +11,14 @@ import { ProjectDetail } from "./pages/ProjectDetail";
 import { CardDetail } from "./pages/CardDetail";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Profile } from "./pages/Profile";
+import { VerifyEmail } from "./components/VerifyEmail";
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify" element={<VerifyEmail />} />
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />

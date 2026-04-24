@@ -7,20 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Field, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast, Toaster } from "sonner";
 export function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:3000/auth/login",
         {
           email: email,
@@ -28,73 +31,100 @@ export function Login() {
         },
         { withCredentials: true },
       );
-      console.log("Login successful", response.data);
 
+      toast.success("Login successful");
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      const message = error?.response?.data?.message || "Login failed";
+      toast.error(message);
+      setError(message);
       console.log("Login failed", error);
     }
   }
 
+  function handleLoginGoogle() {
+    window.location.href = "http://localhost:3000/auth/google/login";
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
-          <CardAction>
-            <Link to="/register">
-              <Button variant="link">Sign Up</Button>
-            </Link>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Email"
-                  required
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                  }}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
+    <>
+      <Toaster position="top-right" />
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Login to your account</CardTitle>
+            <CardDescription>
+              Enter your email below to login to your account
+            </CardDescription>
+            <CardAction>
+              <Link to="/register">
+                <Button variant="link">Sign Up</Button>
+              </Link>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              <div className="flex flex-col gap-6">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Email"
+                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                    }}
+                  />
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Password"
-                  required
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                  }}
-                />
+                <div className="grid gap-2">
+                  <div className="flex items-center">
+                    <Label htmlFor="password">Password</Label>
+                    <a
+                      href="#"
+                      className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    >
+                      Forgot your password?
+                    </a>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Password"
+                    required
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                    }}
+                  />
+                </div>
+                <Button type="submit" className="w-full ">
+                  Login
+                </Button>
               </div>
-              <Button type="submit" className="w-full ">
-                Login
-              </Button>
-            </div>
-            {/* <Button variant="outline" className="w-full">
-                Login with Google
-              </Button> */}
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+              <div className="relative mt-6">
+                <FieldSeparator className="mb-4">
+                  Or continue with
+                </FieldSeparator>
+                <Field>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => handleLoginGoogle()}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    Login with Google
+                  </Button>
+                </Field>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

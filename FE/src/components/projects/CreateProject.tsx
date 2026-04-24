@@ -15,16 +15,20 @@ import { Label } from "@/components/ui/label";
 import { useProjects } from "@/hooks/useProjects";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { Spinner } from "../ui/spinner";
 
 export function CreateProject() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { createProject } = useProjects();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
     await createProject({ name, description });
+    setLoading(false);
     setName("");
     setDescription("");
     setOpen(false);
@@ -74,7 +78,10 @@ export function CreateProject() {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Spinner data-icon="inline-start" />}
+              {loading ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
