@@ -1,16 +1,16 @@
 import { CreateBoard } from "@/components/boards/CreateBoard";
-import { AppSidebar } from "@/components/layout/SideBar";
+
 import { HeaderProject } from "@/components/projects/HeaderProject";
 import { Card } from "@/components/ui/card";
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useProjects } from "@/hooks/useProjects";
 import { useProjectsStore } from "@/stores/projects.store";
+import { toast, Toaster } from "sonner";
 import { Link, useParams } from "react-router-dom";
 
 export function ProjectDetail() {
   const projectId = useParams().projectId as string;
-  const { getProjectBoards, loading, error, getProjectById } = useProjects();
+  const { loading, error, getProjectById } = useProjects();
   const updateProject = useProjectsStore((state) => state.updateProject);
 
   const handleProjectUpdated = (
@@ -36,6 +36,7 @@ export function ProjectDetail() {
 
   return (
     <>
+      <Toaster position="top-right" />
       <HeaderProject
         projectId={projectId}
         projectName={project?.name}

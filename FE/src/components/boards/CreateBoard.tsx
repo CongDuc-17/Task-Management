@@ -17,19 +17,31 @@ import { useBoards } from "@/hooks/useBoards";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Card } from "../ui/card";
+import { Spinner } from "../ui/spinner";
+import { toast, Toaster } from "sonner";
 
 export function CreateBoard({ projectId }: { projectId: string }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [open, setOpen] = useState(false);
-  const { createBoard, loading, error } = useBoards();
+  const [loading, setLoading] = useState(false);
+
+  const { createBoard } = useBoards();
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    await createBoard(projectId, { name, description });
-    setName("");
-    setDescription("");
-    setOpen(false);
+    try {
+      e.preventDefault();
+      setLoading(true);
+      await createBoard(projectId, { name, description });
+      setLoading(false);
+      setName("");
+      setDescription("");
+      setOpen(false);
+    } catch (error) {
+      setLoading(false);
+      const message = error?.response?.data?.message || "Error creating board";
+      toast.error(message);
+    }
   }
 
   return (
@@ -78,7 +90,10 @@ export function CreateBoard({ projectId }: { projectId: string }) {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Spinner data-icon="inline-start" />}
+              {loading ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

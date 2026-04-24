@@ -29,7 +29,7 @@ import { Button } from "../ui/button";
 import { Field, FieldGroup } from "../ui/field";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-
+import { toast } from "sonner";
 import { Card } from "../ui/card";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
@@ -74,6 +74,7 @@ export function MembersBoard({
       setRoles(projectRoles);
       return projectRoles;
     } catch (error) {
+      toast.error("Error fetching roles");
       console.error("Error fetching roles:", error);
     }
   }
@@ -83,12 +84,15 @@ export function MembersBoard({
 
   async function handleUpdateMemberRole(userId: string, newRoleId: string) {
     try {
-      const response = await apiClient.patch(`/boards/${boardId}/members`, {
+      await apiClient.patch(`/boards/${boardId}/members`, {
         userId: userId,
         roleId: newRoleId,
       });
       setMemberRoles((prev) => ({ ...prev, [userId]: newRoleId }));
     } catch (error) {
+      const message =
+        error?.response?.data?.message || "Error updating member role";
+      toast.error(message);
       console.error("Error changing role:", error);
     }
   }
@@ -100,7 +104,7 @@ export function MembersBoard({
     }
 
     if (!selectedRoleId || selectedRoleId === "") {
-      alert("Please select a role");
+      toast.error("Please select a role");
       return;
     }
 
@@ -116,7 +120,8 @@ export function MembersBoard({
       console.log("Invitation response:", response);
     } catch (error) {
       console.error("Error inviting member:", error);
-      alert("Error inviting member");
+      const message = error?.response?.data?.message || "Error inviting member";
+      toast.error(message);
     }
   }
 
@@ -128,7 +133,8 @@ export function MembersBoard({
       await fetchBoard();
     } catch (error) {
       console.error("Error removing member:", error);
-      alert("Error removing member");
+      const message = error?.response?.data?.message || "Error removing member";
+      toast.error(message);
     }
   }
 

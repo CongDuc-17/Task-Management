@@ -15,11 +15,9 @@ import { VscProject } from "react-icons/vsc";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
-// ─── WebSocket singleton ──────────────────────────────────────────────────────
-
 let ws: WebSocket | null = null;
 
-const initWebSocket = (
+const initWebSocket = async (
   onNotification: (notification: any) => void,
   onUnreadCount: (count: number) => void,
 ) => {
@@ -28,11 +26,7 @@ const initWebSocket = (
     ws.close();
   }
 
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}//${window.location.host}/ws`;
-  console.log("[WS] Connecting to:", wsUrl);
-
-  ws = new WebSocket(wsUrl);
+  ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
   ws.onopen = () => {
     console.log("[WS] Connected");
@@ -83,7 +77,6 @@ export function Notifications() {
   const onNotificationRef = useRef<(n: any) => void>(() => {});
   const onUnreadCountRef = useRef<(c: number) => void>(() => {});
 
-  // ── Fetch notifications ──────────────────────────────────────────────────
   const getNotifications = useCallback(async (page = 1, append = false) => {
     try {
       setIsLoading(true);

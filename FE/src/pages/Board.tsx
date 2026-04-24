@@ -28,12 +28,11 @@ import { Outlet } from "react-router-dom";
 
 import {
   Avatar,
-  AvatarBadge,
   AvatarFallback,
   AvatarGroup,
-  AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { toast, Toaster } from "sonner";
 import { MessageSquareText, SquareCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useCardsStore } from "@/stores/cards.store";
@@ -66,8 +65,9 @@ export function Board() {
     fetchLists,
   } = useLists(boardId);
 
-  // Lấy cards từ Zustand Store
   const { cards, setCards } = useCardsStore();
+
+  const [error, setError] = useState("");
   // Fetch cards từ API và lưu vào store
   const fetchCardsForBoard = async (targetListIds: string[]) => {
     if (!targetListIds.length) {
@@ -89,6 +89,7 @@ export function Board() {
       setCards(cardsByList.flat());
     } catch (error) {
       console.error("❌ Failed to fetch cards:", error);
+      toast.error("Failed to fetch cards");
     }
   };
 
@@ -115,6 +116,7 @@ export function Board() {
       }
     } catch (error) {
       console.error("❌ Failed to create card:", error);
+      toast.error("Failed to create card");
     }
   };
 
@@ -237,6 +239,7 @@ export function Board() {
     } catch (error) {
       setColumnOrder(sourceColumns.map((column) => column.id));
       console.error("Error updating column position:", error);
+      toast.error("Error updating column position");
     }
 
     setDraggedColumnId(null);
@@ -273,8 +276,10 @@ export function Board() {
       } catch (error) {
         setTasks(tasks);
         console.error("❌ Error updating card position:", error);
+        toast.error("Error updating card position");
       }
     } catch (error) {
+      toast.error("Error parsing task data");
       console.error("Error parsing task data:", error);
     }
   }
@@ -337,11 +342,13 @@ export function Board() {
       } catch (error) {
         setTasks(oldTasks);
         console.error("Error updating card position:", error);
+        toast.error("Error updating card position");
       }
 
       return newTasks;
     } catch (error) {
       console.error("Error parsing task data:", error);
+      toast.error("Error parsing task data");
     }
   }
 
@@ -360,7 +367,6 @@ export function Board() {
     }
 
     try {
-      // 1. Gọi API update tên List (Sửa lại endpoint cho đúng với BE của bạn)
       await apiClient.patch(`/lists/${columnId}/update`, {
         name: editingColumnTitle,
       });
@@ -368,6 +374,7 @@ export function Board() {
       fetchLists(boardId);
     } catch (error) {
       console.error("Lỗi khi đổi tên cột:", error);
+      toast.error("Failed to update column name");
     } finally {
       setEditingColumnId(null); // Tắt chế độ edit
     }
@@ -375,6 +382,7 @@ export function Board() {
 
   return (
     <>
+      <Toaster position="top-right" />
       <div
         className="flex flex-col h-full w-full overflow-hidden "
         style={
