@@ -1,6 +1,11 @@
+import { CardStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database';
+import { ChecklistsRepository } from '../checklists/checklists.repository';
 export class CardsRepository {
-	constructor(private readonly prismaService = new PrismaService()) {}
+	constructor(
+		private readonly prismaService = new PrismaService(),
+		private readonly checklistRepository = new ChecklistsRepository(),
+	) {}
 
 	async getAllCardsByListId(listId: string) {
 		console.log('listId in repository:', listId);
@@ -216,14 +221,30 @@ export class CardsRepository {
 		});
 	}
 
-	async softDeleteCard(cardId: string) {
+	async archiveCard(cardId: string) {
 		return this.prismaService.cards.update({
 			where: { id: cardId },
-			data: { deletedAt: new Date() },
+			data: { deletedAt: new Date(), status: CardStatusEnum.ARCHIVED },
 		});
 	}
 
-	async hardDeleteCard(cardId: string) {
+	async deleteCard(cardId: string) {
+		await this.prismaService.cardMembers.deleteMany({
+			where: { cardId: cardId },
+		});
+		await this.prismaService.cardLabels.deleteMany({
+			where: { cardId: cardId },
+		});
+
+		const checklists = await this.prismaService.checklists.findMany({
+			where: { cardId: cardId },
+			select: { id: true },
+		});
+
+		for (const checklist of checklists) {
+			await this.checklistRepository.deleteChecklist(checklist.id);
+		}
+
 		return this.prismaService.cards.delete({
 			where: { id: cardId },
 		});

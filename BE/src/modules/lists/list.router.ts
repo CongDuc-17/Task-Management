@@ -62,15 +62,32 @@ router.patch(
 );
 
 listsRegistry.registerPath({
+	method: 'patch',
+	path: '/lists/{listId}/archive',
+	tags: ['Lists'],
+	request: {
+		params: updateListRequestParams,
+	},
+	responses: createApiResponse(listResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+
+router.patch(
+	'/:listId/archive',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(ListPermissionEnum.UPDATE_LIST),
+	listsController.archiveList,
+);
+
+listsRegistry.registerPath({
 	method: 'delete',
-	path: '/lists/{listId}/delete',
+	path: '/lists/{listId}',
 	tags: ['Lists'],
 	request: { params: updateListRequestParams },
 	responses: createApiResponse(listResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 
 router.delete(
-	'/:listId/delete',
+	'/:listId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(ListPermissionEnum.DELETE_LIST),
 	listsController.deleteList,

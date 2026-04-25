@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "format": "prettier --write \"src/**/*.ts\" && pnpm lint",
+    "format": "prettier --write \"src/**/*.ts\" && npm run lint",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "build": "pnpm install & pnpm db:push & npx rimraf dist & npx tsup",
-    "start": "node dist/app.js",
+    "build": "npm install && npm run db:push && npx rimraf dist && npx tsup",
+    "start": "node dist/src/app.js",
     "dev": "tsx watch --clear-screen=false src/app.ts",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -22,7 +22,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.18.0",
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.1.0",
     "@prisma/client": "6.16.3",

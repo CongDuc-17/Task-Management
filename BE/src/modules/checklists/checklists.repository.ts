@@ -35,6 +35,11 @@ export class ChecklistsRepository {
 	}
 
 	async deleteChecklist(checklistId: string) {
+		await this.prismaService.checklistItems.deleteMany({
+			where: {
+				checklistId: checklistId,
+			},
+		});
 		return this.prismaService.checklists.delete({
 			where: {
 				id: checklistId,

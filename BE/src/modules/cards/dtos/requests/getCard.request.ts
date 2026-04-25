@@ -1,7 +1,7 @@
 import z from 'zod';
 import { ZodValidationSchema } from '@/common';
 
-const getCardRequestParams = z.object({
+export const getCardRequestParams = z.object({
 	cardId: z.string().uuid('Invalid card ID'),
 });
 

@@ -1,3 +1,4 @@
+import { ListStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database';
 
 export class ListsRepository {
@@ -5,13 +6,13 @@ export class ListsRepository {
 
 	async getAllListsByBoardId(boardId: string) {
 		return this.prismaService.lists.findMany({
-			where: { boardId: boardId },
+			where: { boardId: boardId, deletedAt: null },
 		});
 	}
 
 	async getLastListByBoardId(boardId: string) {
 		return this.prismaService.lists.findFirst({
-			where: { boardId: boardId },
+			where: { boardId: boardId, deletedAt: null },
 			orderBy: { position: 'desc' },
 		});
 	}
@@ -46,14 +47,17 @@ export class ListsRepository {
 		});
 	}
 
-	async softDeleteList(listId: string) {
+	async archiveList(listId: string) {
 		return this.prismaService.lists.update({
 			where: { id: listId },
-			data: { deletedAt: new Date() },
+			data: { deletedAt: new Date(), status: ListStatusEnum.ARCHIVED },
 		});
 	}
 
-	async hardDeleteList(listId: string) {
+	async deleteList(listId: string) {
+		await this.prismaService.cards.deleteMany({
+			where: { listId: listId },
+		});
 		return this.prismaService.lists.delete({
 			where: { id: listId },
 		});

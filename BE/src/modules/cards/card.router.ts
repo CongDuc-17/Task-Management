@@ -24,6 +24,7 @@ import {
 	addLabelRequestValidationSchema,
 	removeLabelRequestSchema,
 	removeLabelRequestValidationSchema,
+	getCardRequestParams,
 } from './dtos';
 
 import { CardPermissionEnum } from '@/common/enums/permissions';
@@ -74,6 +75,22 @@ router.patch(
 );
 
 cardsRegistry.registerPath({
+	method: 'patch',
+	path: '/cards/{cardId}/archive',
+	tags: ['Cards'],
+	request: {
+		params: moveCardRequestParams,
+	},
+	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:cardId/archive',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
+	cardsController.archiveCard,
+);
+
+cardsRegistry.registerPath({
 	method: 'delete',
 	path: '/cards/{cardId}',
 	tags: ['Cards'],
@@ -87,7 +104,7 @@ router.delete(
 	'/:cardId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(CardPermissionEnum.DELETE_CARD),
-	cardsController.softDeleteCard,
+	cardsController.deleteCard,
 );
 
 cardsRegistry.registerPath({

@@ -4,17 +4,22 @@ import passport from 'passport';
 import { Strategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 
 import { UsersRepository } from '@/modules/users/users.repository';
+import { RolesRepository } from '@/modules/roles/roles.repository';
+import { UserRoleRepository } from '@/modules/userRole/userRole.repository';
 
 import { AuthRepository } from '../auth.repository';
 
 import { InternalServerException, OptionalException } from '@/common';
 import { GoogleOauthConfig } from '@/configs';
+import { UserRoleEnum } from '@/common/enums/roles';
 import { socialAccountsWithPartialRelations } from '@/models';
 
 export class GoogleOauthStrategy {
 	constructor(
 		private readonly authRepository = new AuthRepository(),
 		private readonly usersRepository = new UsersRepository(),
+		private readonly rolesRepository = new RolesRepository(),
+		private readonly userRoleRepository = new UserRoleRepository(),
 	) {
 		this.authRepository = authRepository;
 
@@ -30,6 +35,18 @@ export class GoogleOauthStrategy {
 				this.validate.bind(this),
 			),
 		);
+	}
+
+	private async ensureDefaultSystemRole(userId: string): Promise<void> {
+		const existingRoleId = await this.rolesRepository.findRoleIdByUserId(userId);
+		if (existingRoleId) return;
+
+		const userRole = await this.rolesRepository.findByName(UserRoleEnum.USER);
+		if (!userRole) {
+			throw new InternalServerException();
+		}
+
+		await this.userRoleRepository.assignUserRole(userId, userRole.id);
 	}
 
 	async validate(
@@ -79,6 +96,8 @@ export class GoogleOauthStrategy {
 						},
 					},
 				});
+
+				await this.ensureDefaultSystemRole(socialAccount.userId);
 			} else {
 				if (existingUser.status === UserStatusEnum.LOCKED) {
 					throw new OptionalException(
@@ -112,6 +131,8 @@ export class GoogleOauthStrategy {
 							refreshToken ?? socialAccount.googleRefreshToken,
 					});
 				}
+
+				await this.ensureDefaultSystemRole(existingUser.id);
 			}
 
 			if (!socialAccount) {
