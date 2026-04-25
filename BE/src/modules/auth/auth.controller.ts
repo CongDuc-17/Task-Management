@@ -22,6 +22,7 @@ import {
 	NotFoundException,
 	OptionalException,
 } from '@/common';
+import { appEnv } from '@/configs';
 
 export class AuthController {
 	constructor(private readonly authService = new AuthService()) {}
@@ -83,7 +84,18 @@ export class AuthController {
 				if (result instanceof Exception) {
 					return new HttpResponseDto().exception(result);
 				}
-				return new HttpResponseDto().success<LoginResponseDto>(result);
+
+				const cookies = result.cookies ?? {};
+				Object.entries(cookies).forEach(([name, value]) => {
+					res.cookie(name, String(value), {
+						httpOnly: true,
+						secure: appEnv.NODE_ENV === 'production',
+						sameSite: 'lax',
+						path: '/',
+					});
+				});
+
+				return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard`);
 			},
 		)(req, res, next);
 	};

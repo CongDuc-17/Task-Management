@@ -81,10 +81,20 @@ export class CardsController {
 		return new HttpResponseDto().success<any>(result);
 	}
 
-	async softDeleteCard(req: Request): Promise<Response> {
+	async archiveCard(req: Request): Promise<Response> {
 		const { cardId } = req.params as { cardId: string };
 		const user = req.user as { id: string };
-		const result = await this.cardsService.softDeleteCard(cardId, user.id);
+		const result = await this.cardsService.archiveCard(cardId, user.id);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async deleteCard(req: Request): Promise<Response> {
+		const { cardId } = req.params as { cardId: string };
+		const user = req.user as { id: string };
+		const result = await this.cardsService.deleteCard(cardId, user.id);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}

@@ -61,12 +61,19 @@ export class ProjectMembersRepository {
 			},
 		});
 	}
-	async isUserMemberOfProject(projectId: string, userId: string): Promise<boolean> {
+	async isUserMemberOfProject(projectId: string, userId: string) {
 		const m = await this.prisma.projectMembers.findFirst({
 			where: { projectId, userId },
-			select: { id: true },
+			include: {
+				role: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
 		});
-		return !!m;
+		return m;
 	}
 
 	async getProjectMembers(projectId: string) {

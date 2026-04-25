@@ -172,6 +172,32 @@ export class ProjectsService {
 		};
 	}
 
+	async deleteProject(
+		projectId: string,
+		userId: string,
+	): Promise<HttpResponseBodySuccessDto<null>> {
+		const project = await this.projectsRepository.getProjectById(projectId);
+		if (!project) {
+			throw new NotFoundException('Project not found');
+		}
+		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
+			projectId,
+			userId,
+		);
+		if (!isMember) {
+			throw new Forbidden('You are not a member of this project');
+		}
+		if (isMember.role.name !== ProjectRoleEnum.PROJECT_ADMIN) {
+			throw new Forbidden('Only project admin can delete the project');
+		}
+		await this.projectsRepository.deleteProject(projectId);
+
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
 	async changeRoleMemberProject(
 		projectId: string,
 		userId: string,
@@ -210,7 +236,6 @@ export class ProjectsService {
 			newRoleId,
 		);
 
-		console.log('Changed role of member project result:', changed);
 		return {
 			success: changed.count > 0,
 			data: null,

@@ -107,15 +107,31 @@ export class ListsService {
 		};
 	}
 
-	async softDeleteList(listId: string) {
+	async archiveList(
+		listId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<ListResponseDto>> {
 		const list = await this.listsRepository.getListById(listId);
 		if (!list) {
 			throw new Exception(404, 'List not found');
 		}
-		const deletedList = await this.listsRepository.softDeleteList(listId);
+		const archivedList = await this.listsRepository.archiveList(listId);
 		return {
 			success: true,
-			data: deletedList,
+			data: archivedList,
+		};
+	}
+
+	async deleteList(
+		listId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<null>> {
+		const list = await this.listsRepository.getListById(listId);
+		if (!list) {
+			throw new Exception(404, 'List not found');
+		}
+		await this.listsRepository.deleteList(listId);
+		return {
+			success: true,
+			data: null,
 		};
 	}
 }

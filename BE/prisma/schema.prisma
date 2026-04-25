@@ -58,6 +58,16 @@ enum BoardStatusEnum {
   ARCHIVED @map("archived")
 }
 
+enum ListStatusEnum {
+  ACTIVE   @map("active")
+  ARCHIVED @map("archived")
+}
+
+enum CardStatusEnum {
+  ACTIVE   @map("active")
+  ARCHIVED @map("archived")
+}
+
 enum InvitationStatusEnum {
   PENDING   @map("pending")
   ACCEPTED  @map("accepted")
@@ -68,6 +78,21 @@ enum InvitationStatusEnum {
 enum InvitationTypeEnum {
   EMAIL @map("email")
   LINK  @map("link")
+}
+
+enum NotificationTypeEnum {
+  BOARD_INVITED
+  PROJECT_INVITED
+  CARD_ASSIGNED
+  CARD_COMMENTED
+  CARD_DUE_SOON
+}
+
+enum NotificationEntityTypeEnum {
+  PROJECT
+  BOARD
+  CARD
+  INVITATION
 }
 
 model users {
@@ -147,6 +172,19 @@ model otps {
   expiresAt DateTime @map("expires_at")
 
   @@map("Otps")
+}
+
+model emailVerifications {
+  id        String   @id @default(uuid())
+  email     String
+  code      String   @db.Char(6)
+  token     String   @unique
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@index([email])
+  @@map("Email_Verifications")
 }
 
 model usersRoles {
@@ -279,6 +317,7 @@ model lists {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
+  status    ListStatusEnum @default(ACTIVE)
   cards     cards[]
 
   @@map("Lists")
@@ -291,7 +330,9 @@ model cards {
   listId      String  @map("list_id")
   list        lists   @relation(fields: [listId], references: [id])
   position    Float
-
+  status      CardStatusEnum @default(ACTIVE)
+  isComplete  Boolean @default(false) @map("is_complete")
+  background  String?
   dueDate     DateTime?         @map("due_date")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
@@ -425,20 +466,6 @@ model invitations {
 }
 
 
-enum NotificationTypeEnum {
-  BOARD_INVITED
-  PROJECT_INVITED
-  CARD_ASSIGNED
-  CARD_COMMENTED
-  CARD_DUE_SOON
-}
-
-enum NotificationEntityTypeEnum {
-  PROJECT
-  BOARD
-  CARD
-  INVITATION
-}
 
 model Notifications {
   id          String   @id @default(uuid())

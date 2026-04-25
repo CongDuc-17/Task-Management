@@ -209,7 +209,7 @@ export class CardsService {
 		}
 	}
 
-	async softDeleteCard(
+	async archiveCard(
 		cardId: string,
 		userId: string,
 	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
@@ -222,13 +222,30 @@ export class CardsService {
 				throw new Exception(404, 'List not found');
 			}
 
-			const deletedCard = await this.cardsRepository.softDeleteCard(cardId);
+			const archivedCard = await this.cardsRepository.archiveCard(cardId);
+			return {
+				success: true,
+				data: archivedCard,
+			};
+		} catch (error) {
+			throw error;
+		}
+	}
+
+	async deleteCard(
+		cardId: string,
+		userId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		try {
+			const card = await this.cardsRepository.getCardById(cardId);
+			if (!card) throw new Exception(404, 'Card not found');
+
+			const deletedCard = await this.cardsRepository.deleteCard(cardId);
 			return {
 				success: true,
 				data: deletedCard,
 			};
 		} catch (error) {
-			console.error('[CardsService] softDeleteCard error:', error);
 			throw error;
 		}
 	}
