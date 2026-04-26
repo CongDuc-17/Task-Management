@@ -31,13 +31,14 @@ export class CardsService {
 	async getAllCardsByListId(
 		listId: string,
 		userId: string,
+		status?: string,
 	): Promise<HttpResponseBodySuccessDto<any[]> | Exception> {
 		const list = await this.listsRepository.getListById(listId);
 		if (!list) {
 			throw new Exception(404, 'List not found');
 		}
 
-		const cards = await this.cardsRepository.getAllCardsByListId(listId);
+		const cards = await this.cardsRepository.getAllCardsByListId(listId, status);
 		return {
 			success: true,
 			data: cards,
@@ -230,6 +231,20 @@ export class CardsService {
 		} catch (error) {
 			throw error;
 		}
+	}
+
+	async restoreCard(
+		cardId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<any>> {
+		const card = await this.cardsRepository.getCardById(cardId);
+		if (!card) {
+			throw new Exception(404, 'Card not found');
+		}
+		const restoredCard = await this.cardsRepository.restoreCard(cardId);
+		return {
+			success: true,
+			data: restoredCard,
+		};
 	}
 
 	async deleteCard(

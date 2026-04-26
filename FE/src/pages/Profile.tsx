@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Camera, Eye, Mail, MapPin, EyeOff } from "lucide-react";
+import { Calendar, Camera, Mail, MapPin } from "lucide-react";
 import {
   Card,
   CardContent,

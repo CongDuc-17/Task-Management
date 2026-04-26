@@ -14,13 +14,13 @@ export class ListsService {
 
 	async getAllListsByBoardId(
 		boardId: string,
+		status?: string,
 	): Promise<HttpResponseBodySuccessDto<ListResponseDto[]> | Exception> {
-		console.log('ListsService: getAllListsByBoardId called with boardId:', boardId);
 		const board = await this.boardsRepository.getBoardById(boardId);
 		if (!board) {
 			throw new Exception(404, 'Board not found');
 		}
-		const lists = await this.listsRepository.getAllListsByBoardId(boardId);
+		const lists = await this.listsRepository.getAllListsByBoardId(boardId, status);
 		return {
 			success: true,
 			data: lists,
@@ -118,6 +118,20 @@ export class ListsService {
 		return {
 			success: true,
 			data: archivedList,
+		};
+	}
+
+	async restoreList(
+		listId: string,
+	): Promise<Exception | HttpResponseBodySuccessDto<ListResponseDto>> {
+		const list = await this.listsRepository.getListById(listId);
+		if (!list) {
+			throw new Exception(404, 'List not found');
+		}
+		const restoredList = await this.listsRepository.restoreList(listId);
+		return {
+			success: true,
+			data: restoredList,
 		};
 	}
 

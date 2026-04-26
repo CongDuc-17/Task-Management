@@ -46,7 +46,10 @@ export const useCards = (listIds: string[]) => {
       setLoading(true);
       const cardsByList = await Promise.all(
         targetListIds.map(async (listId) => {
-          const response = await apiClient.get(`/lists/${listId}/cards`);
+          const response = await apiClient.get(
+            `/lists/${listId}/cards?status=ACTIVE`,
+          );
+          console.log("API Response for cards in list", listId, response);
           const payload = (response as { data?: unknown }).data ?? response;
           const listCards = Array.isArray(payload)
             ? (payload as Array<{

@@ -1,5 +1,6 @@
 import z from 'zod';
 import { ZodValidationSchema } from '@/common';
+import { ListStatusEnum } from '@prisma/client';
 
 export class GetBoardByIdRequestDto {
 	boardId: string;
@@ -14,10 +15,16 @@ const getBoardByIdRequestParams = z
 	})
 	.strict();
 
+const getBoardByIdRequestQuery = z
+	.object({ status: z.enum(ListStatusEnum).optional() })
+	.strict();
+
 export const GetBoardByIdRequestValidationSchema: ZodValidationSchema = {
 	params: getBoardByIdRequestParams,
+	query: getBoardByIdRequestQuery,
 };
 
 export const GetBoardByIdRequestSchema = {
 	params: getBoardByIdRequestParams,
+	query: getBoardByIdRequestQuery,
 };

@@ -17,6 +17,7 @@ import {
 } from './dtos';
 
 import {
+	cardRequestQuery,
 	cardResponseDtoSchema,
 	createCardRequestSchema,
 	createCardRequestValidationSchema,
@@ -70,12 +71,27 @@ listsRegistry.registerPath({
 	},
 	responses: createApiResponse(listResponseDtoSchema, 'Success', StatusCodes.OK),
 });
-
 router.patch(
 	'/:listId/archive',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(ListPermissionEnum.UPDATE_LIST),
 	listsController.archiveList,
+);
+
+listsRegistry.registerPath({
+	method: 'patch',
+	path: '/lists/{listId}/restore',
+	tags: ['Lists'],
+	request: {
+		params: updateListRequestParams,
+	},
+	responses: createApiResponse(listResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:listId/restore',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(ListPermissionEnum.UPDATE_LIST),
+	listsController.restoreList,
 );
 
 listsRegistry.registerPath({
@@ -99,6 +115,7 @@ listsRegistry.registerPath({
 	tags: ['Lists'],
 	request: {
 		params: createCardRequestSchema.params,
+		query: cardRequestQuery,
 	},
 	responses: createApiResponse(
 		cardResponseDtoSchema.array(),

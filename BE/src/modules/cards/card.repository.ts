@@ -7,9 +7,9 @@ export class CardsRepository {
 		private readonly checklistRepository = new ChecklistsRepository(),
 	) {}
 
-	async getAllCardsByListId(listId: string) {
+	async getAllCardsByListId(listId: string, status?: string) {
 		return this.prismaService.cards.findMany({
-			where: { listId: listId },
+			where: { listId: listId, status: status as CardStatusEnum },
 			include: {
 				cardMembers: {
 					include: {
@@ -52,7 +52,7 @@ export class CardsRepository {
 
 	async getLastCardByListId(listId: string) {
 		return this.prismaService.cards.findFirst({
-			where: { listId: listId },
+			where: { listId: listId, deletedAt: null, status: CardStatusEnum.ACTIVE },
 			orderBy: { position: 'desc' },
 		});
 	}
@@ -224,6 +224,13 @@ export class CardsRepository {
 		return this.prismaService.cards.update({
 			where: { id: cardId },
 			data: { deletedAt: new Date(), status: CardStatusEnum.ARCHIVED },
+		});
+	}
+
+	async restoreCard(cardId: string) {
+		return this.prismaService.cards.update({
+			where: { id: cardId },
+			data: { deletedAt: null, status: CardStatusEnum.ACTIVE },
 		});
 	}
 
