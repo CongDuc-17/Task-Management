@@ -84,7 +84,10 @@ export class ProjectsRepository {
 			where: { projectId: projectId },
 		});
 
-		const boards = await this.boardsRepository.getBoardsByProjectId(projectId);
+		const boards = await this.prismaService.boards.findMany({
+			where: { projectId: projectId },
+			select: { id: true },
+		});
 		await Promise.all(
 			boards.map((board) => this.boardsRepository.deleteBoard(board.id)),
 		);
