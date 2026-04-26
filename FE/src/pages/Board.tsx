@@ -567,6 +567,34 @@ export function Board() {
       });
       toast.error("Failed to archive list");
     }
+
+    const previousListId =
+      previousIndex > 0 ? currentListOrder[previousIndex - 1] : null;
+    const nextListId =
+      previousIndex < currentListOrder.length - 1
+        ? currentListOrder[previousIndex + 1]
+        : null;
+
+    setArchivedLists((prev) =>
+      prev.find((savedList) => savedList.id === list.id)
+        ? prev
+        : [
+            ...prev,
+            {
+              ...list,
+              previousIndex,
+              previousListId,
+              nextListId,
+            },
+          ],
+    );
+
+    setListOrder((prev) => {
+      const currentOrder = prev ?? baseLists.map((baseList) => baseList.id);
+      return currentOrder.filter((id) => id !== list.id);
+    });
+
+    toast.success(`Archived list "${list.name}"`);
   }
 
   function handleArchiveDrop(e: React.DragEvent) {
@@ -744,6 +772,103 @@ export function Board() {
       });
       toast.error("Failed to restore list");
     }
+  };
+
+  const restoreCard = (card: ArchivedCard) => {
+    setArchivedCards((prev) =>
+      prev.filter((archivedCard) => archivedCard.id !== card.id),
+    );
+
+    updateCards((currentCards) => {
+      if (currentCards.find((currentCard) => currentCard.id === card.id)) {
+        return currentCards;
+      }
+
+      const cardsNotInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId !== card.listId,
+      );
+
+      const cardsInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId === card.listId,
+      );
+
+      const nextCardsInTargetList = [...cardsInTargetList];
+
+      if (card.previousCardId) {
+        const previousIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.previousCardId,
+        );
+        if (previousIndex !== -1) {
+          nextCardsInTargetList.splice(previousIndex + 1, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      if (card.nextCardId) {
+        const nextIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.nextCardId,
+        );
+        if (nextIndex !== -1) {
+          nextCardsInTargetList.splice(nextIndex, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(card.previousIndex, nextCardsInTargetList.length),
+      );
+
+      nextCardsInTargetList.splice(insertIndex, 0, card);
+
+      return [...cardsNotInTargetList, ...nextCardsInTargetList];
+    });
+
+    toast.success(`Restored card "${card.title}"`);
+  };
+
+  const restoreList = (list: ArchivedList) => {
+    setArchivedLists((prev) =>
+      prev.filter((archivedList) => archivedList.id !== list.id),
+    );
+
+    setListOrder((prev) => {
+      const currentOrder =
+        prev ??
+        baseLists.map((baseList) => baseList.id).filter((id) => id !== list.id);
+
+      if (currentOrder.includes(list.id)) {
+        return currentOrder;
+      }
+
+      const nextOrder = [...currentOrder];
+
+      if (list.previousListId) {
+        const previousIndex = nextOrder.indexOf(list.previousListId);
+        if (previousIndex !== -1) {
+          nextOrder.splice(previousIndex + 1, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      if (list.nextListId) {
+        const nextIndex = nextOrder.indexOf(list.nextListId);
+        if (nextIndex !== -1) {
+          nextOrder.splice(nextIndex, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(list.previousIndex, nextOrder.length),
+      );
+      nextOrder.splice(insertIndex, 0, list.id);
+
+      return nextOrder;
+    });
+
+    toast.success(`Restored list "${list.name}"`);
   };
 
   return (
