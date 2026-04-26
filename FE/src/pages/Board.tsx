@@ -121,37 +121,42 @@ export function Board() {
     return [...mappedLists, ...missingLists];
   }, [visibleLists, listOrder]);
 
-  useEffect(() => {
-    if (!listIds.length) {
+  const fetchActiveCards = async (targetListIds: string[]) => {
+    if (!targetListIds.length) {
       setCards([]);
       return;
     }
 
-    const fetchCardsForBoard = async () => {
-      try {
-        const cardsByList = await Promise.all(
-          listIds.map(async (listId) => {
-            const response = await apiClient.get(
-              `/lists/${listId}/cards?status=ACTIVE`,
-            );
-            const payload = (response as { data?: unknown }).data ?? response;
-            const listCards = Array.isArray(payload) ? payload : [];
+    try {
+      const cardsByList = await Promise.all(
+        targetListIds.map(async (listId) => {
+          const response = await apiClient.get(
+            `/lists/${listId}/cards?status=ACTIVE`,
+          );
 
-            return listCards.map((card: any) => ({
-              ...card,
-              listId,
-            }));
-          }),
-        );
+          const payload = (response as { data?: unknown }).data ?? response;
+          const listCards = Array.isArray(payload) ? payload : [];
 
-        setCards(cardsByList.flat());
-      } catch {
-        toast.error("Failed to fetch cards");
-      }
-    };
+          return listCards.map((card: any) => ({
+            ...card,
+            listId,
+          }));
+        }),
+      );
 
-    fetchCardsForBoard();
-  }, [listIdsKey, listIds, setCards]);
+      setCards(cardsByList.flat());
+    } catch {
+      toast.error("Failed to fetch cards");
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveCards(listIds);
+  }, [listIdsKey]);
+
+  useEffect(() => {
+    fetchArchivedCards(archivedLists);
+  }, [archivedLists]);
 
   useEffect(() => {
     setListOrder((prev) => {
@@ -169,6 +174,81 @@ export function Board() {
       return [...filteredPrev, ...missingIds];
     });
   }, [visibleLists]);
+
+  const fetchArchivedLists = async () => {
+    try {
+      const response = await apiClient.get(
+        `/boards/${boardId}/lists?status=ARCHIVED`,
+      );
+
+      const payload = (response as { data?: unknown }).data ?? response;
+      const archived = Array.isArray(payload) ? payload : [];
+
+      setArchivedLists(
+        archived.map((list: any) => ({
+          ...list,
+          previousIndex: 0,
+          previousListId: null,
+          nextListId: null,
+        })),
+      );
+    } catch {
+      toast.error("Failed to fetch archived lists");
+    }
+  };
+  useEffect(() => {
+    if (!boardId) {
+      return;
+    }
+
+    fetchArchivedLists();
+  }, [boardId]);
+
+  const allListsForArchivedCards = useMemo(() => {
+    const merged = [...baseLists, ...archivedLists];
+    const uniqueLists = merged.filter(
+      (list, index, self) =>
+        self.findIndex((item) => item.id === list.id) === index,
+    );
+
+    return uniqueLists;
+  }, [baseLists, archivedLists]);
+
+  const fetchArchivedCards = async (listsToScan: { id: string }[]) => {
+    if (!listsToScan.length) {
+      setArchivedCards([]);
+      return;
+    }
+
+    try {
+      const archivedCardsByList = await Promise.all(
+        listsToScan.map(async (list) => {
+          const response = await apiClient.get(
+            `/lists/${list.id}/cards?status=ARCHIVED`,
+          );
+
+          const payload = (response as { data?: unknown }).data ?? response;
+          const listCards = Array.isArray(payload) ? payload : [];
+
+          return listCards.map((card: any) => ({
+            ...card,
+            listId: list.id,
+            previousIndex: 0,
+            previousCardId: null,
+            nextCardId: null,
+          }));
+        }),
+      );
+
+      setArchivedCards(archivedCardsByList.flat());
+    } catch {
+      toast.error("Failed to fetch archived cards");
+    }
+  };
+
+  useEffect(() => {
+    fetchArchivedCards(allListsForArchivedCards);
+  }, [allListsForArchivedCards]);
 
   const getCurrentCards = () => useCardsStore.getState().cards;
 
@@ -395,7 +475,7 @@ export function Board() {
     setIsDragOverArchive(false);
   }
 
-  function archiveCard(card: BoardCard) {
+  async function archiveCard(card: BoardCard) {
     const currentCards = getCurrentCards();
     const cardsInSameList = getCardsInList(card.listId, currentCards);
     const previousIndex = cardsInSameList.findIndex(
@@ -431,16 +511,61 @@ export function Board() {
       current.filter((currentCard) => currentCard.id !== card.id),
     );
 
-    toast.success(`Archived card "${card.title}"`);
+    try {
+      await apiClient.patch(`/cards/${card.id}/archive`);
+      toast.success(`Archived card "${card.title}"`);
+    } catch (error) {
+      setCards(currentCards);
+      setArchivedCards((prev) => prev.filter((c) => c.id !== card.id));
+      toast.error("Failed to archive card");
+    }
   }
 
-  function archiveList(listId: string) {
+  async function archiveList(listId: string) {
     const list = findListById(listId);
     const currentListOrder = getCurrentListOrder();
     const previousIndex = currentListOrder.findIndex((id) => id === listId);
 
     if (!list || previousIndex === -1) {
       return;
+    }
+
+    const previousListId =
+      previousIndex > 0 ? currentListOrder[previousIndex - 1] : null;
+    const nextListId =
+      previousIndex < currentListOrder.length - 1
+        ? currentListOrder[previousIndex + 1]
+        : null;
+
+    setArchivedLists((prev) =>
+      prev.find((savedList) => savedList.id === list.id)
+        ? prev
+        : [
+            ...prev,
+            {
+              ...list,
+              previousIndex,
+              previousListId,
+              nextListId,
+            },
+          ],
+    );
+
+    setListOrder((prev) => {
+      const currentOrder = prev ?? baseLists.map((baseList) => baseList.id);
+      return currentOrder.filter((id) => id !== list.id);
+    });
+
+    toast.success(`Archived list "${list.name}"`);
+    try {
+      await apiClient.patch(`/lists/${list.id}/archive`);
+      toast.success(`Archived list "${list.name}"`);
+    } catch (error) {
+      setListOrder((prev) => {
+        const currentOrder = prev ?? baseLists.map((baseList) => baseList.id);
+        return [...currentOrder, list.id];
+      });
+      toast.error("Failed to archive list");
     }
 
     const previousListId =
@@ -522,6 +647,130 @@ export function Board() {
       toast.error("Failed to update list name");
     } finally {
       setEditingListId(null);
+    }
+  };
+
+  const restoreCard = async (card: ArchivedCard) => {
+    setArchivedCards((prev) =>
+      prev.filter((archivedCard) => archivedCard.id !== card.id),
+    );
+
+    updateCards((currentCards) => {
+      if (currentCards.find((currentCard) => currentCard.id === card.id)) {
+        return currentCards;
+      }
+
+      const cardsNotInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId !== card.listId,
+      );
+
+      const cardsInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId === card.listId,
+      );
+
+      const nextCardsInTargetList = [...cardsInTargetList];
+
+      if (card.previousCardId) {
+        const previousIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.previousCardId,
+        );
+        if (previousIndex !== -1) {
+          nextCardsInTargetList.splice(previousIndex + 1, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      if (card.nextCardId) {
+        const nextIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.nextCardId,
+        );
+        if (nextIndex !== -1) {
+          nextCardsInTargetList.splice(nextIndex, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(card.previousIndex, nextCardsInTargetList.length),
+      );
+
+      nextCardsInTargetList.splice(insertIndex, 0, card);
+
+      return [...cardsNotInTargetList, ...nextCardsInTargetList];
+    });
+
+    try {
+      await apiClient.patch(`/cards/${card.id}/restore`);
+      await fetchActiveCards(listIds);
+      await fetchArchivedCards(allListsForArchivedCards);
+      toast.success(`Restored card "${card.title}"`);
+    } catch {
+      setArchivedCards((prev) => [...prev, card]);
+      updateCards((current) => current.filter((c) => c.id !== card.id));
+      toast.error("Failed to restore card");
+    }
+  };
+
+  const restoreList = async (list: ArchivedList) => {
+    const previous = archivedLists;
+    setArchivedLists((prev) =>
+      prev.filter((archivedList) => archivedList.id !== list.id),
+    );
+
+    setListOrder((prev) => {
+      const currentOrder =
+        prev ??
+        baseLists.map((baseList) => baseList.id).filter((id) => id !== list.id);
+
+      if (currentOrder.includes(list.id)) {
+        return currentOrder;
+      }
+
+      const nextOrder = [...currentOrder];
+
+      if (list.previousListId) {
+        const previousIndex = nextOrder.indexOf(list.previousListId);
+        if (previousIndex !== -1) {
+          nextOrder.splice(previousIndex + 1, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      if (list.nextListId) {
+        const nextIndex = nextOrder.indexOf(list.nextListId);
+        if (nextIndex !== -1) {
+          nextOrder.splice(nextIndex, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(list.previousIndex, nextOrder.length),
+      );
+      nextOrder.splice(insertIndex, 0, list.id);
+
+      return nextOrder;
+    });
+
+    toast.success(`Restored list "${list.name}"`);
+    try {
+      await apiClient.patch(`/lists/${list.id}/restore`);
+      await fetchLists(boardId);
+      await fetchArchivedLists();
+      toast.success(`Restored list "${list.name}"`);
+    } catch {
+      setArchivedLists(previous);
+      setListOrder((prev) => {
+        const currentOrder =
+          prev ??
+          baseLists
+            .map((baseList) => baseList.id)
+            .filter((id) => id !== list.id);
+        return currentOrder.filter((id) => id !== list.id);
+      });
+      toast.error("Failed to restore list");
     }
   };
 
@@ -883,18 +1132,36 @@ export function Board() {
             onDragLeave={handleArchiveDragLeave}
             onDrop={handleArchiveDrop}
             onRestoreCard={restoreCard}
-            onDeleteCard={(card) => {
+            onDeleteCard={async (card) => {
+              const previous = archivedCards;
               setArchivedCards((prev) =>
                 prev.filter((archivedCard) => archivedCard.id !== card.id),
               );
-              toast.success(`Đã xóa card "${card.title}"`);
+
+              try {
+                await apiClient.delete(`/cards/${card.id}`);
+                toast.success(`Deleted card "${card.title}"`);
+              } catch {
+                setArchivedCards(previous);
+                toast.error("Failed to delete card");
+              }
             }}
             onRestoreList={restoreList}
-            onDeleteList={(list) => {
+            onDeleteList={async (list) => {
+              const previous = archivedLists;
               setArchivedLists((prev) =>
                 prev.filter((archivedList) => archivedList.id !== list.id),
               );
-              toast.success(`Đã xóa list "${list.name}"`);
+
+              try {
+                await apiClient.delete(`/lists/${list.id}`);
+                await fetchLists(boardId);
+                await fetchArchivedLists();
+                toast.success(`Deleted list "${list.name}"`);
+              } catch {
+                setArchivedLists(previous);
+                toast.error("Failed to delete list");
+              }
             }}
           />
         </div>

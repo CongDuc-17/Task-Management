@@ -240,6 +240,10 @@ export class CardsService {
 		if (!card) {
 			throw new Exception(404, 'Card not found');
 		}
+		const list = await this.listsRepository.getListById(card.listId);
+		if (!list) {
+			throw new Exception(404, 'List not found');
+		}
 		const restoredCard = await this.cardsRepository.restoreCard(cardId);
 		return {
 			success: true,
