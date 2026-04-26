@@ -125,10 +125,12 @@ export class ListsService {
 		listId: string,
 	): Promise<Exception | HttpResponseBodySuccessDto<null>> {
 		const list = await this.listsRepository.getListById(listId);
+
 		if (!list) {
 			throw new Exception(404, 'List not found');
 		}
 		await this.listsRepository.deleteList(listId);
+		console.log('List deleted successfully');
 		return {
 			success: true,
 			data: null,

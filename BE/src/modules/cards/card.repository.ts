@@ -8,7 +8,6 @@ export class CardsRepository {
 	) {}
 
 	async getAllCardsByListId(listId: string) {
-		console.log('listId in repository:', listId);
 		return this.prismaService.cards.findMany({
 			where: { listId: listId },
 			include: {

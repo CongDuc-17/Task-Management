@@ -176,26 +176,34 @@ export class ProjectsService {
 		projectId: string,
 		userId: string,
 	): Promise<HttpResponseBodySuccessDto<null>> {
-		const project = await this.projectsRepository.getProjectById(projectId);
-		if (!project) {
-			throw new NotFoundException('Project not found');
-		}
-		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
-			projectId,
-			userId,
-		);
-		if (!isMember) {
-			throw new Forbidden('You are not a member of this project');
-		}
-		if (isMember.role.name !== ProjectRoleEnum.PROJECT_ADMIN) {
-			throw new Forbidden('Only project admin can delete the project');
-		}
-		await this.projectsRepository.deleteProject(projectId);
+		try {
+			const project = await this.projectsRepository.getProjectById(projectId);
+			if (!project) {
+				throw new NotFoundException('Project not found');
+			}
+			const isMember = await this.projectMembersRepository.isUserMemberOfProject(
+				projectId,
+				userId,
+			);
+			if (!isMember) {
+				throw new Forbidden('You are not a member of this project');
+			}
+			if (isMember.role.name !== ProjectRoleEnum.PROJECT_ADMIN) {
+				throw new Forbidden('Only project admin can delete the project');
+			}
+			await this.projectsRepository.deleteProject(projectId);
 
-		return {
-			success: true,
-			data: null,
-		};
+			return {
+				success: true,
+				data: null,
+			};
+		} catch (error) {
+			console.error('[ProjectsService] deleteProject error:', error);
+			if (error instanceof NotFoundException || error instanceof Forbidden) {
+				throw error;
+			}
+			throw new InternalServerException();
+		}
 	}
 
 	async changeRoleMemberProject(

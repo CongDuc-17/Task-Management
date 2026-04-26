@@ -64,6 +64,16 @@ export class ProjectsController {
 		return new HttpResponseDto().success<null>(result);
 	}
 
+	async deleteProject(req: Request): Promise<Response> {
+		const projectId = req.params.projectId as string;
+		const userId = (req.user as { id: string }).id;
+		const result = await this.projectService.deleteProject(projectId, userId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
 	async changeRoleMemberProject(req: Request): Promise<Response> {
 		const projectId = req.params.projectId as string;
 

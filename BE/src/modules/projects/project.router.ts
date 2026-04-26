@@ -96,6 +96,20 @@ router.patch(
 );
 
 projectsRegistry.registerPath({
+	method: 'patch',
+	path: '/projects/{projectId}/archive',
+	tags: ['Projects'],
+	request: GetProjectByIdRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:projectId/archive',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.UPDATE_PROJECT),
+	projectsController.archiveProject,
+);
+
+projectsRegistry.registerPath({
 	method: 'delete',
 	path: '/projects/{projectId}',
 	tags: ['Projects'],
@@ -107,7 +121,7 @@ router.delete(
 	'/:projectId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.DELETE_PROJECT),
-	projectsController.archiveProject,
+	projectsController.deleteProject,
 );
 
 projectsRegistry.registerPath({
