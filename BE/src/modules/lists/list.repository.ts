@@ -1,8 +1,12 @@
 import { ListStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database';
+import { CardsRepository } from '../cards/card.repository';
 
 export class ListsRepository {
-	constructor(private readonly prismaService = new PrismaService()) {}
+	constructor(
+		private readonly prismaService = new PrismaService(),
+		private readonly cardsRepository = new CardsRepository(),
+	) {}
 
 	async getAllListsByBoardId(boardId: string) {
 		return this.prismaService.lists.findMany({
@@ -55,9 +59,9 @@ export class ListsRepository {
 	}
 
 	async deleteList(listId: string) {
-		await this.prismaService.cards.deleteMany({
-			where: { listId: listId },
-		});
+		const cards = await this.cardsRepository.getAllCardsByListId(listId);
+		await Promise.all(cards.map((card) => this.cardsRepository.deleteCard(card.id)));
+
 		return this.prismaService.lists.delete({
 			where: { id: listId },
 		});

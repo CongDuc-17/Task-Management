@@ -29,24 +29,17 @@ export class ListsController {
 	}
 
 	async createList(req: Request): Promise<Response> {
-		try {
-			const { boardId } = req.params as { boardId: string };
-			const { name } = req.body as { name: string };
-			const user = req.user as { id: string };
+		const { boardId } = req.params as { boardId: string };
+		const { name } = req.body as { name: string };
+		const user = req.user as { id: string };
 
-			const result = await this.listsService.createList(name, boardId);
+		const result = await this.listsService.createList(name, boardId);
 
-			if (result instanceof Exception) {
-				return new HttpResponseDto().exception(result);
-			}
-
-			return new HttpResponseDto().success<any>(result);
-		} catch (error) {
-			console.error('Error in createList:', error);
-			return new HttpResponseDto().exception(
-				new Exception(500, 'Internal Server Error'),
-			);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
 		}
+
+		return new HttpResponseDto().success<any>(result);
 	}
 
 	async moveList(req: Request): Promise<Response> {
@@ -97,34 +90,19 @@ export class ListsController {
 	}
 
 	async archiveList(req: Request): Promise<Response> {
-		try {
-			const { listId } = req.params as { listId: string };
-			const result = await this.listsService.archiveList(listId);
-			if (result instanceof Exception) {
-				return new HttpResponseDto().exception(result);
-			}
-			return new HttpResponseDto().success<any>(result);
-		} catch (error) {
-			console.error('Error in archiveList:', error);
-			return new HttpResponseDto().exception(
-				new Exception(500, 'Internal Server Error'),
-			);
+		const { listId } = req.params as { listId: string };
+		const result = await this.listsService.archiveList(listId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
 		}
+		return new HttpResponseDto().success<any>(result);
 	}
 
 	async deleteList(req: Request): Promise<Response> {
-		try {
-			const { listId } = req.params as { listId: string };
-			const result = await this.listsService.deleteList(listId);
-			if (result instanceof Exception) {
-				return new HttpResponseDto().exception(result);
-			}
-			return new HttpResponseDto().success<any>(result);
-		} catch (error) {
-			console.error('Error in deleteList:', error);
-			return new HttpResponseDto().exception(
-				new Exception(500, 'Internal Server Error'),
-			);
+		const { listId } = req.params as { listId: string };
+		const result = await this.listsService.deleteList(listId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
 		}
 	}
 }

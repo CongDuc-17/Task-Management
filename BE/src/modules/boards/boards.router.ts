@@ -72,6 +72,20 @@ router.patch(
 );
 
 boardsRegistry.registerPath({
+	method: 'patch',
+	path: '/boards/{boardId}/archive',
+	tags: ['Boards'],
+	request: GetBoardByIdRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:boardId/archive',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
+	boardsController.archiveBoard,
+);
+
+boardsRegistry.registerPath({
 	method: 'delete',
 	path: '/boards/{boardId}',
 	tags: ['Boards'],
@@ -82,7 +96,7 @@ router.delete(
 	'/:boardId',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.DELETE_BOARD),
-	boardsController.archiveBoard,
+	boardsController.deleteBoard,
 );
 
 boardsRegistry.registerPath({

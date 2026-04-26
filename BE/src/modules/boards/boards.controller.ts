@@ -91,6 +91,16 @@ export class BoardsController {
 		return new HttpResponseDto().success<null>(result);
 	}
 
+	async deleteBoard(req: Request): Promise<Response> {
+		const boardId = req.params.boardId as string;
+
+		const result = await this.boardsService.deleteBoard(boardId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
 	async changeRoleOfMemberBoard(req: Request): Promise<Response> {
 		const boardId = req.params.boardId as string;
 		const { userId, roleId } = req.body;

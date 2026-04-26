@@ -218,6 +218,26 @@ export class BoardsService {
 		};
 	}
 
+	async deleteBoard(boardId: string): Promise<HttpResponseBodySuccessDto<null>> {
+		try {
+			const board = await this.boardsRepository.getBoardById(boardId);
+			if (!board) {
+				throw new NotFoundException('Board not found');
+			}
+			await this.boardsRepository.deleteBoard(boardId);
+			return {
+				success: true,
+				data: null,
+			};
+		} catch (error) {
+			console.error('Error occurred while deleting board:', error);
+			if (error instanceof NotFoundException) {
+				throw error;
+			}
+			throw new InternalServerException();
+		}
+	}
+
 	async changeRoleOfMemberBoard(
 		boardId: string,
 		userId: string,

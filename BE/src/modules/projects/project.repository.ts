@@ -4,9 +4,13 @@ import { Prisma, ProjectStatusEnum, UserStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database';
 
 import { projects } from '@/models';
+import { BoardsRepository } from '../boards/boards.repository';
 
 export class ProjectsRepository {
-	constructor(private readonly prismaService = new PrismaService()) {}
+	constructor(
+		private readonly prismaService = new PrismaService(),
+		private readonly boardsRepository = new BoardsRepository(),
+	) {}
 
 	async createProject(
 		name: string,
@@ -71,14 +75,24 @@ export class ProjectsRepository {
 	async archiveProject(projectId: string): Promise<projects> {
 		return this.prismaService.projects.update({
 			where: { id: projectId },
-			data: { status: ProjectStatusEnum.ARCHIVED },
+			data: { status: ProjectStatusEnum.ARCHIVED, deletedAt: new Date() },
 		});
 	}
 
 	async deleteProject(projectId: string): Promise<projects> {
-		return this.prismaService.projects.update({
+		await this.prismaService.projectMembers.deleteMany({
+			where: { projectId: projectId },
+		});
+
+		const boards = await this.prismaService.boards.findMany({
+			where: { projectId: projectId },
+			select: { id: true },
+		});
+		await Promise.all(
+			boards.map((board) => this.boardsRepository.deleteBoard(board.id)),
+		);
+		return this.prismaService.projects.delete({
 			where: { id: projectId },
-			data: { deletedAt: new Date() },
 		});
 	}
 }
