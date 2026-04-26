@@ -8,17 +8,24 @@ export class ListsController {
 	constructor(private readonly listsService: ListsService = new ListsService()) {}
 
 	async getAllListsByBoardId(req: Request): Promise<Response> {
-		const { boardId } = req.params as { boardId: string };
-		console.log('Fetching lists for boardId:', boardId);
+		try {
+			const { boardId } = req.params as { boardId: string };
+			console.log('Fetching lists for boardId:', boardId);
 
-		const user = req.user as { id: string };
+			const user = req.user as { id: string };
 
-		const result = await this.listsService.getAllListsByBoardId(boardId);
-		if (result instanceof Exception) {
-			console.error('Error fetching lists:', result);
-			return new HttpResponseDto().exception(result);
+			const result = await this.listsService.getAllListsByBoardId(boardId);
+			if (result instanceof Exception) {
+				console.error('Error fetching lists:', result);
+				return new HttpResponseDto().exception(result);
+			}
+			return new HttpResponseDto().success<any[]>(result);
+		} catch (error) {
+			console.error('Error in getAllListsByBoardId:', error);
+			return new HttpResponseDto().exception(
+				new Exception(500, 'Internal Server Error'),
+			);
 		}
-		return new HttpResponseDto().success<any[]>(result);
 	}
 
 	async createList(req: Request): Promise<Response> {
@@ -36,25 +43,32 @@ export class ListsController {
 	}
 
 	async moveList(req: Request): Promise<Response> {
-		const { listId } = req.params as { listId: string };
-		const { beforeListId, afterListId } = req.body;
+		try {
+			const { listId } = req.params as { listId: string };
+			const { beforeListId, afterListId } = req.body;
 
-		const list = await this.listsService.getListById(listId);
-		if (!list) {
-			return new HttpResponseDto().exception(new Exception(404, 'List not found'));
+			const list = await this.listsService.getListById(listId);
+			if (!list) {
+				return new HttpResponseDto().exception(new Exception(404, 'List not found'));
+			}
+
+			const user = req.user as { id: string };
+
+			const result = await this.listsService.moveList(
+				listId,
+				beforeListId,
+				afterListId,
+			);
+			if (result instanceof Exception) {
+				return new HttpResponseDto().exception(result);
+			}
+			return new HttpResponseDto().success<any>(result);
+		} catch (error) {
+			console.error('Error in moveList:', error);
+			return new HttpResponseDto().exception(
+				new Exception(500, 'Internal Server Error'),
+			);
 		}
-
-		const user = req.user as { id: string };
-
-		const result = await this.listsService.moveList(
-			listId,
-			beforeListId,
-			afterListId,
-		);
-		if (result instanceof Exception) {
-			return new HttpResponseDto().exception(result);
-		}
-		return new HttpResponseDto().success<any>(result);
 	}
 
 	async updateList(req: Request): Promise<Response> {
@@ -90,6 +104,5 @@ export class ListsController {
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<any>(result);
 	}
 }
