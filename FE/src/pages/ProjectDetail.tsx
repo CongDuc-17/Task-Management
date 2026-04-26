@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 
 import { useProjects } from "@/hooks/useProjects";
 import { useProjectsStore } from "@/stores/projects.store";
-import { toast, Toaster } from "sonner";
+import { Toaster } from "sonner";
 import { Link, useParams } from "react-router-dom";
 
 export function ProjectDetail() {

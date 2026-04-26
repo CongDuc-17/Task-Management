@@ -11,8 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { VerifyEmail } from "@/components/VerifyEmail";
-import axios, { AxiosError } from "axios";
+
+import { apiClient } from "@/lib/apiClient";
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
@@ -33,8 +34,8 @@ export function Register() {
     }
     try {
       setLoading(true);
-      await axios.post(
-        "http://localhost:3000/auth/register",
+      await apiClient.post(
+        "/auth/register",
         {
           email,
           password,
@@ -45,7 +46,7 @@ export function Register() {
       setLoading(false);
       localStorage.setItem("emailForVerification", email);
       toast.success("Registration successful. Please verify your email.");
-      navigate("/verify", { replace: true, state: { email } });
+      navigate("/verify", { replace: true });
     } catch (error) {
       const message = error?.response?.data?.message || "Registration failed";
       toast.error(message);

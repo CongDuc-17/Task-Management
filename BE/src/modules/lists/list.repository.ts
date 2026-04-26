@@ -8,15 +8,20 @@ export class ListsRepository {
 		private readonly cardsRepository = new CardsRepository(),
 	) {}
 
-	async getAllListsByBoardId(boardId: string) {
+	async getAllListsByBoardId(boardId: string, status?: string) {
 		return this.prismaService.lists.findMany({
-			where: { boardId: boardId, deletedAt: null },
+			where: {
+				boardId: boardId,
+
+				status: status as ListStatusEnum,
+			},
+			orderBy: { position: 'asc' },
 		});
 	}
 
 	async getLastListByBoardId(boardId: string) {
 		return this.prismaService.lists.findFirst({
-			where: { boardId: boardId, deletedAt: null },
+			where: { boardId: boardId, deletedAt: null, status: ListStatusEnum.ACTIVE },
 			orderBy: { position: 'desc' },
 		});
 	}
@@ -55,6 +60,13 @@ export class ListsRepository {
 		return this.prismaService.lists.update({
 			where: { id: listId },
 			data: { deletedAt: new Date(), status: ListStatusEnum.ARCHIVED },
+		});
+	}
+
+	async restoreList(listId: string) {
+		return this.prismaService.lists.update({
+			where: { id: listId },
+			data: { deletedAt: null, status: ListStatusEnum.ACTIVE },
 		});
 	}
 

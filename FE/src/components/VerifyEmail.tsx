@@ -17,25 +17,41 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { apiClient } from "@/lib/apiClient";
-import { useState } from "react";
-import { toast, Toaster } from "sonner";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 export function VerifyEmail() {
   const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const email = localStorage.getItem("emailForVerification") || "";
 
+  useEffect(() => {
+    if (!email) navigate("/register", { replace: true });
+  }, [email, navigate]);
+
   const handleVerify = async () => {
+    setLoading(true);
+    if (otp.length !== 6) {
+      toast.error("Please enter the 6-digit code");
+      return;
+    }
     try {
+      setLoading(true);
       await apiClient.post("/auth/verify", {
         email,
         otp,
       });
       localStorage.removeItem("emailForVerification");
       toast.success("Email verified successfully. You can now log in.");
-      window.location.href = "/login";
+      navigate("/login", { replace: true });
     } catch (error) {
       console.error("Verification failed", error);
       toast.error("Verification failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
   return (

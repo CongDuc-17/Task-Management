@@ -91,6 +91,22 @@ router.patch(
 );
 
 cardsRegistry.registerPath({
+	method: 'patch',
+	path: '/cards/{cardId}/restore',
+	tags: ['Cards'],
+	request: {
+		params: moveCardRequestParams,
+	},
+	responses: createApiResponse(cardResponseDtoSchema, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:cardId/restore',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(CardPermissionEnum.UPDATE_CARD),
+	cardsController.restoreCard,
+);
+
+cardsRegistry.registerPath({
 	method: 'delete',
 	path: '/cards/{cardId}',
 	tags: ['Cards'],

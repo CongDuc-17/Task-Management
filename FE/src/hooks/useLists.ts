@@ -11,7 +11,9 @@ export const useLists = (boardId: string) => {
   async function fetchLists(boardId: string) {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/boards/${boardId}/lists`);
+      const response = await apiClient.get(
+        `/boards/${boardId}/lists?status=ACTIVE`,
+      );
       const payload = (response as { data?: unknown }).data ?? response;
 
       setLists(Array.isArray(payload) ? (payload as List[]) : []);

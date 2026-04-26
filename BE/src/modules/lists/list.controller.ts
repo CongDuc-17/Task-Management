@@ -10,11 +10,8 @@ export class ListsController {
 	async getAllListsByBoardId(req: Request): Promise<Response> {
 		try {
 			const { boardId } = req.params as { boardId: string };
-			console.log('Fetching lists for boardId:', boardId);
-
-			const user = req.user as { id: string };
-
-			const result = await this.listsService.getAllListsByBoardId(boardId);
+			const { status } = req.query as { status?: string };
+			const result = await this.listsService.getAllListsByBoardId(boardId, status);
 			if (result instanceof Exception) {
 				console.error('Error fetching lists:', result);
 				return new HttpResponseDto().exception(result);
@@ -49,7 +46,9 @@ export class ListsController {
 
 			const list = await this.listsService.getListById(listId);
 			if (!list) {
-				return new HttpResponseDto().exception(new Exception(404, 'List not found'));
+				return new HttpResponseDto().exception(
+					new Exception(404, 'List not found'),
+				);
 			}
 
 			const user = req.user as { id: string };
@@ -98,11 +97,21 @@ export class ListsController {
 		return new HttpResponseDto().success<any>(result);
 	}
 
+	async restoreList(req: Request): Promise<Response> {
+		const { listId } = req.params as { listId: string };
+		const result = await this.listsService.restoreList(listId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
 	async deleteList(req: Request): Promise<Response> {
 		const { listId } = req.params as { listId: string };
 		const result = await this.listsService.deleteList(listId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
+		return new HttpResponseDto().success<any>(result);
 	}
 }

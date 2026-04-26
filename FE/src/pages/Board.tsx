@@ -1,5 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { toast, Toaster } from "sonner";
+import { MessageSquareText, SquareCheck } from "lucide-react";
 
 import {
   KanbanBoardProvider,
@@ -11,20 +13,19 @@ import {
   KanbanBoardColumnListItem,
   KanbanBoardCard,
   KanbanBoardCardTitle,
-  KanbanBoardCardDescription,
   KanbanBoardColumnFooter,
   type KanbanBoardDropDirection,
 } from "@/components/kanban";
 
-import { useLists } from "@/hooks/useLists";
-import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
+import { useBoards } from "@/hooks/useBoards";
+import { useLists } from "@/hooks/useLists";
+import { useCardsStore, type Card as BoardCard } from "@/stores/cards.store";
+
+import { HeaderBoard } from "@/components/boards/HeaderBoard";
+import { ArchivePopover } from "@/components/boards/Archive";
 import { CreateList } from "@/components/lists/CreateList";
 import { CreateCard } from "@/components/cards/CreateCard";
-import { HeaderBoard } from "@/components/boards/HeaderBoard";
-import { useBoards } from "@/hooks/useBoards";
-import { axiosClient } from "@/lib/apiClient";
-import { Outlet } from "react-router-dom";
 
 import {
   Avatar,
@@ -32,31 +33,30 @@ import {
   AvatarGroup,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { toast, Toaster } from "sonner";
-import { MessageSquareText, SquareCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useCardsStore } from "@/stores/cards.store";
+
 type List = {
   id: string;
   name: string;
   position: number;
 };
 
-type Card = {
-  id: string;
-  title: string;
-  description?: string;
-  listId: string;
-  position: number;
-  cardLabels?: any[];
-  cardMembers?: any[];
-  checklists?: any[];
-  commentsCount?: number;
+type ArchivedList = List & {
+  previousIndex: number;
+  previousListId: string | null;
+  nextListId: string | null;
+};
+
+type ArchivedCard = BoardCard & {
+  previousIndex: number;
+  previousCardId: string | null;
+  nextCardId: string | null;
 };
 
 export function Board() {
   const boardId = useParams().boardId as string;
   const navigate = useNavigate();
+
   const { board, fetchBoard } = useBoards();
   const {
     lists,
@@ -67,65 +67,25 @@ export function Board() {
 
   const { cards, setCards } = useCardsStore();
 
-  const [error, setError] = useState("");
-  // Fetch cards từ API và lưu vào store
-  const fetchCardsForBoard = async (targetListIds: string[]) => {
-    if (!targetListIds.length) {
-      setCards([]);
-      return;
-    }
+  const [listOrder, setListOrder] = useState<string[] | null>(null);
+  const [draggedListId, setDraggedListId] = useState<string | null>(null);
+  const [dragOverListId, setDragOverListId] = useState<string | null>(null);
 
-    try {
-      const cardsByList = await Promise.all(
-        targetListIds.map(async (listId) => {
-          const response = await apiClient.get(`/lists/${listId}/cards`);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editingListName, setEditingListName] = useState("");
 
-          const payload = (response as { data?: unknown }).data ?? response;
-          const listCards = Array.isArray(payload) ? payload : [];
-          return listCards.map((card: any) => ({ ...card, listId }));
-        }),
-      );
-
-      setCards(cardsByList.flat());
-    } catch (error) {
-      console.error("❌ Failed to fetch cards:", error);
-      toast.error("Failed to fetch cards");
-    }
-  };
+  const [archivedCards, setArchivedCards] = useState<ArchivedCard[]>([]);
+  const [archivedLists, setArchivedLists] = useState<ArchivedList[]>([]);
+  const [isDragOverArchive, setIsDragOverArchive] = useState(false);
 
   const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
-  const listIdsKey = listIds.join(","); //  string ổn định, không tạo reference mới
+  const listIdsKey = listIds.join(",");
 
-  useEffect(() => {
-    if (listIds.length) {
-      fetchCardsForBoard(listIds);
-    }
-  }, [listIdsKey]);
-
-  // Create card và lưu vào store
-  const createCard = async (listId: string, title: string) => {
-    try {
-      const response = await apiClient.post(`/lists/${listId}/cards`, {
-        title,
-      });
-
-      const newCard = response.data ?? response;
-      if (newCard && typeof newCard === "object" && "id" in newCard) {
-        // Thêm card mới vào store
-        setCards([...cards, { ...newCard, listId }]);
-      }
-    } catch (error) {
-      console.error("❌ Failed to create card:", error);
-      toast.error("Failed to create card");
-    }
-  };
-
-  const [columnOrder, setColumnOrder] = useState<string[] | null>(null);
-  const baseColumns = useMemo<List[]>(
+  const baseLists = useMemo<List[]>(
     () =>
       [...lists]
-        .sort((a: List, b: List) => a.position - b.position)
-        .map((list: List) => ({
+        .sort((a, b) => a.position - b.position)
+        .map((list) => ({
           id: list.id,
           name: list.name,
           position: list.position,
@@ -133,47 +93,126 @@ export function Board() {
     [lists],
   );
 
-  const columns = useMemo<List[]>(() => {
-    if (!columnOrder) {
-      return baseColumns;
+  const archivedListIds = useMemo(
+    () => new Set(archivedLists.map((list) => list.id)),
+    [archivedLists],
+  );
+
+  const visibleLists = useMemo(
+    () => baseLists.filter((list) => !archivedListIds.has(list.id)),
+    [baseLists, archivedListIds],
+  );
+
+  const orderedLists = useMemo<List[]>(() => {
+    if (!listOrder) {
+      return visibleLists;
     }
 
-    const columnsMap = new Map(
-      baseColumns.map((column) => [column.id, column]),
+    const listMap = new Map(visibleLists.map((list) => [list.id, list]));
+
+    const mappedLists = listOrder
+      .map((listId) => listMap.get(listId))
+      .filter((list): list is List => Boolean(list));
+
+    const missingLists = visibleLists.filter(
+      (list) => !listOrder.includes(list.id),
     );
-    const orderedColumns = columnOrder
-      .map((columnId) => columnsMap.get(columnId))
-      .filter((column): column is List => Boolean(column));
 
-    const missingColumns = baseColumns.filter(
-      (column) => !columnOrder.includes(column.id),
-    );
+    return [...mappedLists, ...missingLists];
+  }, [visibleLists, listOrder]);
 
-    return [...orderedColumns, ...missingColumns];
-  }, [baseColumns, columnOrder]);
+  useEffect(() => {
+    if (!listIds.length) {
+      setCards([]);
+      return;
+    }
 
-  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
-  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+    const fetchCardsForBoard = async () => {
+      try {
+        const cardsByList = await Promise.all(
+          listIds.map(async (listId) => {
+            const response = await apiClient.get(
+              `/lists/${listId}/cards?status=ACTIVE`,
+            );
+            const payload = (response as { data?: unknown }).data ?? response;
+            const listCards = Array.isArray(payload) ? payload : [];
 
-  const defaultTasks = useMemo<Card[]>(() => cards, [cards]);
+            return listCards.map((card: any) => ({
+              ...card,
+              listId,
+            }));
+          }),
+        );
 
-  const [tasks, setTasks] = useState<Card[]>([]);
-  const tasksToRender = tasks.length ? tasks : defaultTasks;
+        setCards(cardsByList.flat());
+      } catch {
+        toast.error("Failed to fetch cards");
+      }
+    };
 
-  /**
-   * XỬ LÝ KÉO THẢ CỘT
-   */
-  function handleColumnDragStart(e: React.DragEvent, columnId: string) {
-    // QUAN TRỌNG: stopPropagation để ngăn event bubble lên parent
+    fetchCardsForBoard();
+  }, [listIdsKey, listIds, setCards]);
+
+  useEffect(() => {
+    setListOrder((prev) => {
+      const visibleListIds = visibleLists.map((list) => list.id);
+
+      if (!prev) {
+        return visibleListIds;
+      }
+
+      const filteredPrev = prev.filter((id) => visibleListIds.includes(id));
+      const missingIds = visibleListIds.filter(
+        (id) => !filteredPrev.includes(id),
+      );
+
+      return [...filteredPrev, ...missingIds];
+    });
+  }, [visibleLists]);
+
+  const getCurrentCards = () => useCardsStore.getState().cards;
+
+  const updateCards = (updater: (currentCards: BoardCard[]) => BoardCard[]) => {
+    const currentCards = getCurrentCards();
+    setCards(updater(currentCards));
+  };
+
+  const getCardsInList = (listId: string, sourceCards: BoardCard[]) =>
+    sourceCards.filter((card) => card.listId === listId);
+
+  const getCurrentListOrder = () =>
+    listOrder ?? baseLists.map((list) => list.id);
+
+  const findListById = (listId: string) =>
+    baseLists.find((list) => list.id === listId) ??
+    orderedLists.find((list) => list.id === listId);
+
+  const createCard = async (listId: string, title: string) => {
+    try {
+      const response = await apiClient.post(`/lists/${listId}/cards`, {
+        title,
+      });
+      const newCard = (response as { data?: unknown }).data ?? response;
+
+      if (newCard && typeof newCard === "object" && "id" in newCard) {
+        updateCards((currentCards) => [
+          ...currentCards,
+          { ...(newCard as BoardCard), listId },
+        ]);
+      }
+    } catch {
+      toast.error("Failed to create card");
+    }
+  };
+
+  function handleListDragStart(e: React.DragEvent, listId: string) {
     e.stopPropagation();
-    setDraggedColumnId(columnId);
-    // Đánh dấu đây là column drag, không phải card drag
+    setDraggedListId(listId);
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("application/x-kanban-column", columnId);
+    e.dataTransfer.setData("application/x-kanban-column", listId);
   }
 
-  function handleColumnDragOver(e: React.DragEvent, columnId: string) {
-    // Chỉ xử lý nếu đang kéo column (không phải card)
+  function handleListDragOver(e: React.DragEvent, listId: string) {
     if (!e.dataTransfer.types.includes("application/x-kanban-column")) {
       return;
     }
@@ -181,111 +220,100 @@ export function Board() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (draggedColumnId && draggedColumnId !== columnId) {
-      setDragOverColumnId(columnId);
+    if (draggedListId && draggedListId !== listId) {
+      setDragOverListId(listId);
     }
   }
 
-  async function handleColumnDrop(e: React.DragEvent, targetColumnId: string) {
-    // Chỉ xử lý nếu đang kéo column
+  async function handleListDrop(e: React.DragEvent, targetListId: string) {
     if (!e.dataTransfer.types.includes("application/x-kanban-column")) {
       return;
     }
-    console.log("Column drop detected");
 
     e.preventDefault();
     e.stopPropagation();
 
-    if (!draggedColumnId || draggedColumnId === targetColumnId) {
+    if (!draggedListId || draggedListId === targetListId) {
       return;
     }
 
-    const sourceColumns =
-      columnOrder?.length === columns.length
-        ? columnOrder
-            .map((columnId) => columns.find((column) => column.id === columnId))
-            .filter((column): column is List => Boolean(column))
-        : columns;
+    const sourceLists =
+      listOrder?.length === orderedLists.length
+        ? listOrder
+            .map((listId) => orderedLists.find((list) => list.id === listId))
+            .filter((list): list is List => Boolean(list))
+        : orderedLists;
 
-    const newColumns = [...sourceColumns];
-    const draggedIndex = newColumns.findIndex(
-      (col) => col.id === draggedColumnId,
+    const nextLists = [...sourceLists];
+    const draggedIndex = nextLists.findIndex(
+      (list) => list.id === draggedListId,
     );
-    const targetIndex = newColumns.findIndex(
-      (col) => col.id === targetColumnId,
-    );
+    const targetIndex = nextLists.findIndex((list) => list.id === targetListId);
 
     if (draggedIndex < 0 || targetIndex < 0) {
-      return columnOrder;
+      return;
     }
 
-    const [draggedColumn] = newColumns.splice(draggedIndex, 1);
-    newColumns.splice(targetIndex, 0, draggedColumn);
+    const [draggedList] = nextLists.splice(draggedIndex, 1);
+    nextLists.splice(targetIndex, 0, draggedList);
 
-    const beforeListId = newColumns[targetIndex - 1]?.id;
-    const afterListId = newColumns[targetIndex + 1]?.id;
+    const previousListId = nextLists[targetIndex - 1]?.id;
+    const nextListId = nextLists[targetIndex + 1]?.id;
 
-    //goi api
+    const previousOrder = sourceLists.map((list) => list.id);
+    const nextOrder = nextLists.map((list) => list.id);
+
+    setListOrder(nextOrder);
+
     try {
-      const response = await axiosClient.patch(
-        `/lists/${draggedColumn.id}/move`,
-        {
-          beforeListId,
-          afterListId,
-        },
-      );
-      setColumnOrder(newColumns.map((column) => column.id));
-      console.log("Update column position response:", response);
-    } catch (error) {
-      setColumnOrder(sourceColumns.map((column) => column.id));
-      console.error("Error updating column position:", error);
-      toast.error("Error updating column position");
+      await apiClient.patch(`/lists/${draggedList.id}/move`, {
+        beforeListId: previousListId,
+        afterListId: nextListId,
+      });
+    } catch {
+      setListOrder(previousOrder);
+      toast.error("Error updating list position");
+    } finally {
+      setDraggedListId(null);
+      setDragOverListId(null);
     }
-
-    setDraggedColumnId(null);
-    setDragOverColumnId(null);
   }
 
-  function handleColumnDragEnd() {
-    setDraggedColumnId(null);
-    setDragOverColumnId(null);
+  function handleListDragEnd() {
+    setDraggedListId(null);
+    setDragOverListId(null);
   }
 
-  /**
-   * XỬ LÝ KÉO THẢ CARD
-   */
-  // Khi thả vào cột hoặc vùng trống (không phải thả vào card cụ thể)
-  async function handleDropOverColumn(columnId: string, data: string) {
+  async function handleCardDropToList(targetListId: string, data: string) {
     try {
-      console.log("Drop over column:", columnId, "with data:", data);
-      const taskData = JSON.parse(data) as Card;
-      console.log("Parsed task data:", taskData);
-      if (taskData.listId === columnId) {
+      const draggedCard = JSON.parse(data) as BoardCard;
+
+      if (draggedCard.listId === targetListId) {
         return;
       }
 
-      const sourceTasks = (tasks.length ? tasks : defaultTasks).map((task) =>
-        task.id === taskData.id ? { ...task, listId: columnId } : task,
+      const previousCards = getCurrentCards();
+      const nextCards = previousCards.map((card) =>
+        card.id === draggedCard.id ? { ...card, listId: targetListId } : card,
       );
-      setTasks(sourceTasks);
+
+      setCards(nextCards);
+
       try {
-        await axiosClient.patch(`/cards/${taskData.id}/move`, {
-          targetListId: columnId,
+        await apiClient.patch(`/cards/${draggedCard.id}/move`, {
+          targetListId,
         });
-        console.log("✅ Update card position response");
-      } catch (error) {
-        setTasks(tasks);
-        console.error("❌ Error updating card position:", error);
+      } catch {
+        setCards(previousCards);
         toast.error("Error updating card position");
       }
     } catch (error) {
-      toast.error("Error parsing task data");
-      console.error("Error parsing task data:", error);
+      console.error("Error parsing card data:", error);
+      toast.error("Error parsing card data");
     }
   }
 
-  // Khi thả vào một card cụ thể, cần biết thả ở trên hay dưới card đó để tính toán vị trí mới
-  async function handleDropOverListItem(
+  async function handleCardDropToCard(
     targetCardId: string,
     data: string,
     direction: KanbanBoardDropDirection,
@@ -295,96 +323,310 @@ export function Board() {
     }
 
     try {
-      console.log(
-        `Drop over card: ${targetCardId} with data:`,
-        data,
-        `and direction: ${direction}`,
-      );
-      //const draggedTask = JSON.parse(data) as Task;
-      const draggedTask = JSON.parse(data);
-      if (draggedTask.id === targetCardId) {
+      const draggedCard = JSON.parse(data) as BoardCard;
+
+      if (draggedCard.id === targetCardId) {
         return;
       }
 
-      const currentTasks = tasks.length ? tasks : defaultTasks;
-      const targetTask = currentTasks.find((task) => task.id === targetCardId);
-      if (!targetTask) return;
+      const previousCards = getCurrentCards();
+      const targetCard = previousCards.find((card) => card.id === targetCardId);
 
-      const tasksWithoutDragged = currentTasks.filter(
-        (task) => task.id !== draggedTask.id,
+      if (!targetCard) {
+        return;
+      }
+
+      const cardsWithoutDragged = previousCards.filter(
+        (card) => card.id !== draggedCard.id,
       );
 
-      const targetIndex = tasksWithoutDragged.findIndex(
-        (task) => task.id === targetCardId,
+      const targetIndex = cardsWithoutDragged.findIndex(
+        (card) => card.id === targetCardId,
       );
+
+      if (targetIndex === -1) {
+        return;
+      }
 
       const insertIndex = direction === "top" ? targetIndex : targetIndex + 1;
 
-      const newTasks = [
-        ...tasksWithoutDragged.slice(0, insertIndex),
-        { ...draggedTask, listId: targetTask.listId },
-        ...tasksWithoutDragged.slice(insertIndex),
+      const nextCards = [
+        ...cardsWithoutDragged.slice(0, insertIndex),
+        { ...draggedCard, listId: targetCard.listId },
+        ...cardsWithoutDragged.slice(insertIndex),
       ];
 
-      const targetListId = targetTask.listId;
-      const beforeCardId = newTasks[insertIndex - 1]?.id;
-      const afterCardId = newTasks[insertIndex + 1]?.id;
+      const beforeCardId = nextCards[insertIndex - 1]?.id;
+      const afterCardId = nextCards[insertIndex + 1]?.id;
 
-      const oldTasks = tasks;
-      setTasks(newTasks);
+      setCards(nextCards);
+
       try {
-        await axiosClient.patch(`/cards/${draggedTask.id}/move`, {
-          targetListId,
+        await apiClient.patch(`/cards/${draggedCard.id}/move`, {
+          targetListId: targetCard.listId,
           beforeCardId,
           afterCardId,
         });
-        console.log("Update card position response:");
-      } catch (error) {
-        setTasks(oldTasks);
-        console.error("Error updating card position:", error);
+      } catch {
+        setCards(previousCards);
         toast.error("Error updating card position");
       }
 
-      return newTasks;
-    } catch (error) {
-      console.error("Error parsing task data:", error);
-      toast.error("Error parsing task data");
+      return nextCards;
+    } catch {
+      toast.error("Error parsing card data");
     }
   }
 
-  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
-  const [editingColumnTitle, setEditingColumnTitle] = useState("");
-  const startEditingColumn = (column: List) => {
-    setEditingColumnId(column.id);
-    setEditingColumnTitle(column.name);
+  function handleArchiveDragOver(e: React.DragEvent) {
+    const isCard = e.dataTransfer.types.includes("kanban-board-card");
+    const isList = e.dataTransfer.types.includes("application/x-kanban-column");
+
+    if (!isCard && !isList) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverArchive(true);
+  }
+
+  function handleArchiveDragLeave() {
+    setIsDragOverArchive(false);
+  }
+
+  function archiveCard(card: BoardCard) {
+    const currentCards = getCurrentCards();
+    const cardsInSameList = getCardsInList(card.listId, currentCards);
+    const previousIndex = cardsInSameList.findIndex(
+      (currentCard) => currentCard.id === card.id,
+    );
+
+    if (previousIndex === -1) {
+      return;
+    }
+
+    const previousCardId =
+      previousIndex > 0 ? cardsInSameList[previousIndex - 1].id : null;
+    const nextCardId =
+      previousIndex < cardsInSameList.length - 1
+        ? cardsInSameList[previousIndex + 1].id
+        : null;
+
+    setArchivedCards((prev) =>
+      prev.find((archivedCard) => archivedCard.id === card.id)
+        ? prev
+        : [
+            ...prev,
+            {
+              ...card,
+              previousIndex,
+              previousCardId,
+              nextCardId,
+            },
+          ],
+    );
+
+    updateCards((current) =>
+      current.filter((currentCard) => currentCard.id !== card.id),
+    );
+
+    toast.success(`Archived card "${card.title}"`);
+  }
+
+  function archiveList(listId: string) {
+    const list = findListById(listId);
+    const currentListOrder = getCurrentListOrder();
+    const previousIndex = currentListOrder.findIndex((id) => id === listId);
+
+    if (!list || previousIndex === -1) {
+      return;
+    }
+
+    const previousListId =
+      previousIndex > 0 ? currentListOrder[previousIndex - 1] : null;
+    const nextListId =
+      previousIndex < currentListOrder.length - 1
+        ? currentListOrder[previousIndex + 1]
+        : null;
+
+    setArchivedLists((prev) =>
+      prev.find((savedList) => savedList.id === list.id)
+        ? prev
+        : [
+            ...prev,
+            {
+              ...list,
+              previousIndex,
+              previousListId,
+              nextListId,
+            },
+          ],
+    );
+
+    setListOrder((prev) => {
+      const currentOrder = prev ?? baseLists.map((baseList) => baseList.id);
+      return currentOrder.filter((id) => id !== list.id);
+    });
+
+    toast.success(`Archived list "${list.name}"`);
+  }
+
+  function handleArchiveDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverArchive(false);
+
+    const cardData = e.dataTransfer.getData("kanban-board-card");
+    if (cardData) {
+      try {
+        const card = JSON.parse(cardData) as BoardCard;
+        archiveCard(card);
+        return;
+      } catch {
+        toast.error("Error parsing card data");
+        return;
+      }
+    }
+
+    const listId = e.dataTransfer.getData("application/x-kanban-column");
+    if (!listId) {
+      return;
+    }
+
+    archiveList(listId);
+    setDraggedListId(null);
+    setDragOverListId(null);
+  }
+
+  const startEditingList = (list: List) => {
+    setEditingListId(list.id);
+    setEditingListName(list.name);
   };
 
-  const handleSaveColumnName = async (columnId: string) => {
-    // Nếu rỗng thì thoát chế độ edit, không lưu
-    if (!editingColumnTitle.trim()) {
-      setEditingColumnId(null);
+  const handleSaveListName = async (listId: string) => {
+    const nextName = editingListName.trim();
+
+    if (!nextName) {
+      setEditingListId(null);
       return;
     }
 
     try {
-      await apiClient.patch(`/lists/${columnId}/update`, {
-        name: editingColumnTitle,
+      await apiClient.patch(`/lists/${listId}/update`, {
+        name: nextName,
       });
 
       fetchLists(boardId);
-    } catch (error) {
-      console.error("Lỗi khi đổi tên cột:", error);
-      toast.error("Failed to update column name");
+    } catch {
+      toast.error("Failed to update list name");
     } finally {
-      setEditingColumnId(null); // Tắt chế độ edit
+      setEditingListId(null);
     }
+  };
+
+  const restoreCard = (card: ArchivedCard) => {
+    setArchivedCards((prev) =>
+      prev.filter((archivedCard) => archivedCard.id !== card.id),
+    );
+
+    updateCards((currentCards) => {
+      if (currentCards.find((currentCard) => currentCard.id === card.id)) {
+        return currentCards;
+      }
+
+      const cardsNotInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId !== card.listId,
+      );
+
+      const cardsInTargetList = currentCards.filter(
+        (currentCard) => currentCard.listId === card.listId,
+      );
+
+      const nextCardsInTargetList = [...cardsInTargetList];
+
+      if (card.previousCardId) {
+        const previousIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.previousCardId,
+        );
+        if (previousIndex !== -1) {
+          nextCardsInTargetList.splice(previousIndex + 1, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      if (card.nextCardId) {
+        const nextIndex = nextCardsInTargetList.findIndex(
+          (currentCard) => currentCard.id === card.nextCardId,
+        );
+        if (nextIndex !== -1) {
+          nextCardsInTargetList.splice(nextIndex, 0, card);
+          return [...cardsNotInTargetList, ...nextCardsInTargetList];
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(card.previousIndex, nextCardsInTargetList.length),
+      );
+
+      nextCardsInTargetList.splice(insertIndex, 0, card);
+
+      return [...cardsNotInTargetList, ...nextCardsInTargetList];
+    });
+
+    toast.success(`Restored card "${card.title}"`);
+  };
+
+  const restoreList = (list: ArchivedList) => {
+    setArchivedLists((prev) =>
+      prev.filter((archivedList) => archivedList.id !== list.id),
+    );
+
+    setListOrder((prev) => {
+      const currentOrder =
+        prev ??
+        baseLists.map((baseList) => baseList.id).filter((id) => id !== list.id);
+
+      if (currentOrder.includes(list.id)) {
+        return currentOrder;
+      }
+
+      const nextOrder = [...currentOrder];
+
+      if (list.previousListId) {
+        const previousIndex = nextOrder.indexOf(list.previousListId);
+        if (previousIndex !== -1) {
+          nextOrder.splice(previousIndex + 1, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      if (list.nextListId) {
+        const nextIndex = nextOrder.indexOf(list.nextListId);
+        if (nextIndex !== -1) {
+          nextOrder.splice(nextIndex, 0, list.id);
+          return nextOrder;
+        }
+      }
+
+      const insertIndex = Math.max(
+        0,
+        Math.min(list.previousIndex, nextOrder.length),
+      );
+      nextOrder.splice(insertIndex, 0, list.id);
+
+      return nextOrder;
+    });
+
+    toast.success(`Restored list "${list.name}"`);
   };
 
   return (
     <>
       <Toaster position="top-right" />
       <div
-        className="flex flex-col h-full w-full overflow-hidden "
+        className="flex h-full w-full flex-col overflow-hidden"
         style={
           board?.background
             ? {
@@ -400,144 +642,144 @@ export function Board() {
           boardMembers={board?.members ?? []}
           fetchBoard={fetchBoard}
         />
+
         <KanbanBoardProvider>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+          <div className="hide-scrollbar flex-1 overflow-x-auto overflow-y-hidden p-4">
             <KanbanBoard>
-              {columns.map((column) => (
+              {orderedLists.map((list) => (
                 <div
-                  key={column.id}
-                  onDragOver={(e) => handleColumnDragOver(e, column.id)}
-                  onDrop={(e) => handleColumnDrop(e, column.id)}
+                  key={list.id}
+                  onDragOver={(e) => handleListDragOver(e, list.id)}
+                  onDrop={(e) => handleListDrop(e, list.id)}
                   className={`transition-all ${
-                    draggedColumnId === column.id ? "opacity-50" : ""
+                    draggedListId === list.id ? "opacity-50" : ""
                   } ${
-                    dragOverColumnId === column.id &&
-                    draggedColumnId !== column.id
+                    dragOverListId === list.id && draggedListId !== list.id
                       ? "scale-105"
                       : ""
                   }`}
                 >
                   <KanbanBoardColumn
-                    className="w-88 relative"
-                    columnId={column.id}
+                    className="relative w-88"
+                    columnId={list.id}
                     onDropOverColumn={(data) =>
-                      handleDropOverColumn(column.id, data)
+                      handleCardDropToList(list.id, data)
                     }
                   >
-                    {/* Header cột với drag handle */}
                     <KanbanBoardColumnHeader
-                      draggable={editingColumnId !== column.id}
-                      onDragStart={(e) => handleColumnDragStart(e, column.id)}
-                      onDragEnd={handleColumnDragEnd}
-                      className={
-                        editingColumnId !== column.id ? "cursor-move" : ""
-                      }
+                      draggable={editingListId !== list.id}
+                      onDragStart={(e) => handleListDragStart(e, list.id)}
+                      onDragEnd={handleListDragEnd}
+                      className={editingListId !== list.id ? "cursor-move" : ""}
                     >
-                      {editingColumnId === column.id ? (
+                      {editingListId === list.id ? (
                         <div className="w-full px-2">
                           <Input
-                            value={editingColumnTitle}
-                            onChange={(e) =>
-                              setEditingColumnTitle(e.target.value)
-                            }
-                            onBlur={() => handleSaveColumnName(column.id)}
+                            value={editingListName}
+                            onChange={(e) => setEditingListName(e.target.value)}
+                            onBlur={() => handleSaveListName(list.id)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
-                                handleSaveColumnName(column.id);
-                              } else if (e.key === "Escape") {
-                                setEditingColumnId(null); // Hủy edit khi bấm Esc
+                                handleSaveListName(list.id);
+                              }
+
+                              if (e.key === "Escape") {
+                                setEditingListId(null);
                               }
                             }}
-                            autoFocus // Tự động focus vào input khi mở lên
+                            autoFocus
                             className="h-8 text-sm font-semibold"
                           />
                         </div>
                       ) : (
                         <KanbanBoardColumnTitle
-                          columnId={column.id}
-                          className="pl-2 w-full select-none" // select-none để tránh bôi đen nhầm khi double click
-                          onDoubleClick={() => startEditingColumn(column)}
+                          columnId={list.id}
+                          className="w-full select-none pl-2"
+                          onDoubleClick={() => startEditingList(list)}
                         >
-                          {column.name}
+                          {list.name}
                         </KanbanBoardColumnTitle>
                       )}
                     </KanbanBoardColumnHeader>
 
-                    {/* Danh sách cards */}
                     <KanbanBoardColumnList>
-                      {tasksToRender
-                        .filter((task) => task.listId === column.id)
-                        .map((task) => {
+                      {cards
+                        .filter((card) => card.listId === list.id)
+                        .map((card) => {
                           const totalItems =
-                            task.checklists?.reduce(
-                              (sum, cl) =>
-                                sum + (cl.checklistItems?.length || 0),
+                            card.checklists?.reduce(
+                              (sum, checklist) =>
+                                sum + (checklist.checklistItems?.length || 0),
                               0,
                             ) ?? 0;
+
                           const completedItems =
-                            task.checklists?.reduce(
-                              (sum, cl) =>
+                            card.checklists?.reduce(
+                              (sum, checklist) =>
                                 sum +
-                                (cl.checklistItems?.filter((i) => i.completed)
-                                  .length || 0),
+                                (checklist.checklistItems?.filter(
+                                  (item) => item.completed,
+                                ).length || 0),
                               0,
                             ) ?? 0;
+
                           return (
                             <KanbanBoardColumnListItem
-                              key={task.id}
-                              cardId={task.id}
+                              key={card.id}
+                              cardId={card.id}
                               onDropOverListItem={(data, direction) =>
-                                handleDropOverListItem(task.id, data, direction)
+                                handleCardDropToCard(card.id, data, direction)
                               }
                             >
                               <KanbanBoardCard
-                                data={task}
+                                data={card}
                                 onClick={() =>
                                   navigate(
-                                    `/boards/${boardId}/cards/${task.id}`,
+                                    `/boards/${boardId}/cards/${card.id}`,
                                   )
                                 }
                                 className="relative"
                               >
-                                {task.cardLabels &&
-                                  task.cardLabels.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2">
-                                      {task.cardLabels?.map(
-                                        (cardLabel: any) => {
-                                          const labelDetail = cardLabel?.label;
-                                          if (!labelDetail) return null;
+                                {card.cardLabels &&
+                                  card.cardLabels.length > 0 && (
+                                    <div className="mb-2 flex flex-wrap gap-1">
+                                      {card.cardLabels.map((cardLabel: any) => {
+                                        const labelDetail = cardLabel?.label;
+                                        if (!labelDetail) {
+                                          return null;
+                                        }
 
-                                          return (
-                                            <span
-                                              key={labelDetail.id}
-                                              className="inline-block px-2 text-[10px] font-semibold text-white rounded-full"
-                                              style={{
-                                                backgroundColor:
-                                                  labelDetail.color,
-                                              }}
-                                            >
-                                              {labelDetail.name}
-                                            </span>
-                                          );
-                                        },
-                                      )}
+                                        return (
+                                          <span
+                                            key={labelDetail.id}
+                                            className="inline-block rounded-full px-2 text-[10px] font-semibold text-white"
+                                            style={{
+                                              backgroundColor:
+                                                labelDetail.color,
+                                            }}
+                                          >
+                                            {labelDetail.name}
+                                          </span>
+                                        );
+                                      })}
                                     </div>
                                   )}
+
                                 <KanbanBoardCardTitle>
-                                  {task.title}
+                                  {card.title}
                                 </KanbanBoardCardTitle>
 
-                                <div className="flex justify-between items-center gap-2">
-                                  <div className="flex gap-4 items-center text-xs">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-4 text-xs">
                                     <div className="flex items-center gap-1">
                                       <MessageSquareText className="w-4" />
-                                      {task.commentsCount || 0}
+                                      {card.commentsCount || 0}
                                     </div>
 
                                     {totalItems > 0 && (
                                       <div className="flex items-center gap-1">
                                         <SquareCheck
-                                          className="w-4 "
+                                          className="w-4"
                                           color={
                                             completedItems === totalItems
                                               ? "green"
@@ -545,7 +787,7 @@ export function Board() {
                                           }
                                         />
                                         <div className="flex items-center gap-1">
-                                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
                                             <div
                                               className={`h-full rounded-full transition-all ${
                                                 completedItems === totalItems
@@ -572,21 +814,20 @@ export function Board() {
                                   </div>
 
                                   <div>
-                                    {task.cardMembers &&
-                                      task.cardMembers.length > 0 && (
-                                        <AvatarGroup className="">
-                                          {/* 2. Map over the members INSIDE the AvatarGroup */}
-                                          {task.cardMembers.map(
+                                    {card.cardMembers &&
+                                      card.cardMembers.length > 0 && (
+                                        <AvatarGroup>
+                                          {card.cardMembers.map(
                                             (cardMember: any) => {
                                               const memberDetail =
                                                 cardMember?.user;
-                                              if (!memberDetail) return null;
+                                              if (!memberDetail) {
+                                                return null;
+                                              }
 
                                               return (
-                                                // 3. Always provide a unique 'key' when rendering elements in a list
                                                 <Avatar key={memberDetail.id}>
                                                   <AvatarImage
-                                                    // Use the actual user's avatar URL from your data
                                                     src={
                                                       memberDetail.avatar || ""
                                                     }
@@ -613,18 +854,14 @@ export function Board() {
                         })}
                     </KanbanBoardColumnList>
 
-                    {/* Footer để thêm card mới */}
                     <KanbanBoardColumnFooter>
-                      <CreateCard
-                        listId={column.id}
-                        onCardCreated={createCard}
-                      />
+                      <CreateCard listId={list.id} onCardCreated={createCard} />
                     </KanbanBoardColumnFooter>
                   </KanbanBoardColumn>
                 </div>
               ))}
 
-              <div className="flex-shrink-0 w-88">
+              <div className="w-88 flex-shrink-0">
                 <CreateList
                   boardId={boardId}
                   createList={createList}
@@ -634,8 +871,33 @@ export function Board() {
             </KanbanBoard>
           </div>
         </KanbanBoardProvider>
-        {/* Outlet để render nested routes (CardDetail modal) */}
+
         <Outlet />
+
+        <div className="absolute bottom-8 right-6">
+          <ArchivePopover
+            savedCards={archivedCards}
+            savedLists={archivedLists}
+            isDragOver={isDragOverArchive}
+            onDragOver={handleArchiveDragOver}
+            onDragLeave={handleArchiveDragLeave}
+            onDrop={handleArchiveDrop}
+            onRestoreCard={restoreCard}
+            onDeleteCard={(card) => {
+              setArchivedCards((prev) =>
+                prev.filter((archivedCard) => archivedCard.id !== card.id),
+              );
+              toast.success(`Đã xóa card "${card.title}"`);
+            }}
+            onRestoreList={restoreList}
+            onDeleteList={(list) => {
+              setArchivedLists((prev) =>
+                prev.filter((archivedList) => archivedList.id !== list.id),
+              );
+              toast.success(`Đã xóa list "${list.name}"`);
+            }}
+          />
+        </div>
       </div>
     </>
   );

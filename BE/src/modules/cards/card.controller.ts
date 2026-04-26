@@ -9,9 +9,14 @@ export class CardsController {
 
 	async getAllCardsByListId(req: Request): Promise<Response> {
 		const { listId } = req.params as { listId: string };
+		const { status } = req.query as { status?: string };
 		const user = req.user as { id: string };
 
-		const result = await this.cardsService.getAllCardsByListId(listId, user.id);
+		const result = await this.cardsService.getAllCardsByListId(
+			listId,
+			user.id,
+			status,
+		);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
@@ -85,6 +90,15 @@ export class CardsController {
 		const { cardId } = req.params as { cardId: string };
 		const user = req.user as { id: string };
 		const result = await this.cardsService.archiveCard(cardId, user.id);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<any>(result);
+	}
+
+	async restoreCard(req: Request): Promise<Response> {
+		const { cardId } = req.params as { cardId: string };
+		const result = await this.cardsService.restoreCard(cardId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}

@@ -10,7 +10,8 @@ import {
 import { Field, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import axios from "axios";
+import { apiClient } from "@/lib/apiClient";
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
@@ -23,8 +24,8 @@ export function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await axios.post(
-        "http://localhost:3000/auth/login",
+      await apiClient.post(
+        "/auth/login",
         {
           email: email,
           password: password,
@@ -43,7 +44,7 @@ export function Login() {
   }
 
   function handleLoginGoogle() {
-    window.location.href = "http://localhost:3000/auth/google/login";
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google/login`;
   }
 
   return (
