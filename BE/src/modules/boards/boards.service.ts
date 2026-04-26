@@ -231,6 +231,9 @@ export class BoardsService {
 			};
 		} catch (error) {
 			console.error('Error occurred while deleting board:', error);
+			if (error instanceof NotFoundException) {
+				throw error;
+			}
 			throw new InternalServerException();
 		}
 	}
