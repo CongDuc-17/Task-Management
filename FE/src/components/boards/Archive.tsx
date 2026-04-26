@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Label } from "../ui/label";
 
 type ArchiveCard = {
   id: string;
@@ -59,7 +60,7 @@ export function ArchivePopover({
             rounded-full border-2 shadow-lg transition-all duration-200
             ${
               isDragOver
-                ? "w-22 h-22 bg-amber-100 border-amber-400 shadow-amber-300 scale-110"
+                ? "w-22 h-22 bg-black/20 backdrop-blur-sm order-black shadow-black scale-110"
                 : "w-15 h-15 bg-white/80 backdrop-blur-sm border-transparent hover:bg-white"
             }
           `}
@@ -67,7 +68,7 @@ export function ArchivePopover({
         >
           <Archive
             className={`transition-all duration-200 pointer-events-none ${
-              isDragOver ? "w-10 h-10 text-amber-500" : "w-6 h-6 text-gray-600"
+              isDragOver ? "w-10 h-10 text-black" : "w-6 h-6 text-gray-600"
             }`}
           />
           {totalCount > 0 && !isDragOver && (
@@ -83,6 +84,7 @@ export function ArchivePopover({
         align="end"
         className="w-80 max-h-[420px] overflow-y-auto"
       >
+        <Label className="pb-2">Archived Items</Label>
         <Tabs defaultValue="cards" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="cards">
@@ -118,13 +120,11 @@ export function ArchivePopover({
                   <span className="text-sm truncate flex-1">{card.title}</span>
                   <div className="flex gap-2 shrink-0">
                     <ArchiveRestore
-                      color="gray"
                       className="hover:cursor-pointer hover:text-blue-500 transition-colors"
                       onClick={() => onRestoreCard(card)}
                     />
                     <Trash2
-                      color="gray"
-                      className="hover:cursor-pointer hover:text-red-500 transition-colors"
+                      className="hover:cursor-pointer hover:text-[#ff0000] transition-colors"
                       onClick={() => onDeleteCard(card)}
                     />
                   </div>
@@ -148,12 +148,10 @@ export function ArchivePopover({
                   <span className="text-sm truncate flex-1">{list.name}</span>
                   <div className="flex gap-2 shrink-0">
                     <ArchiveRestore
-                      color="gray"
                       className="hover:cursor-pointer hover:text-blue-500 transition-colors"
                       onClick={() => onRestoreList(list)}
                     />
                     <Trash2
-                      color="gray"
                       className="hover:cursor-pointer hover:text-red-500 transition-colors"
                       onClick={() => onDeleteList(list)}
                     />
