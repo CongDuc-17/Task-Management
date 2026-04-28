@@ -10,7 +10,6 @@ import {
 	CreateProjectRequestValidationSchema,
 } from './dtos/requests';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
-import { projectResponseDtoSchema } from './dtos/responses/project.response';
 import authMiddleware from '@/common/middlewares/auth.middleware';
 import { BoardPermissionEnum, ProjectPermissionEnum } from '@/common/enums/permissions';
 import {
@@ -22,10 +21,19 @@ import {
 	UpdateInformationRequestValidationSchema,
 } from './dtos/requests/updateInformation.request';
 import { UpdateRoleMemberProjectRequestSchema } from './dtos/requests';
-import { boardResponseDtoSchema, CreateBoardRequestSchema } from '../boards/dtos';
+import {
+	boardResponseDtoSchema,
+	CreateBoardRequestSchema,
+	NewBoardsResponseDTOSchema,
+} from '../boards/dtos';
 import { BoardsController } from '../boards/boards.controller';
-import z from 'zod';
-import { uploadAvatarMiddleware } from '@/common/middlewares/upload.middleware';
+
+import { GetProjectsResponseDTOSchema } from './dtos/responses/getProjects.response';
+import {
+	GetMembersResponseDTOSchema,
+	GetProjectResponseDTOSchema,
+} from './dtos/responses';
+import { RemoveMemberProjectRequestSchema } from './dtos/requests/removeMember.request';
 const projectsController = new ProjectsController();
 const boardsController = new BoardsController();
 export const projectsRegistry = new OpenAPIRegistry();
@@ -35,11 +43,28 @@ autoBindUtil(projectsController);
 autoBindUtil(boardsController);
 
 projectsRegistry.registerPath({
+	method: 'get',
+	path: '/projects',
+	tags: ['Projects'],
+	responses: createApiResponse(
+		GetProjectsResponseDTOSchema.array(),
+		'Success',
+		StatusCodes.OK,
+	),
+});
+router.get(
+	'/',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifySystemPermission(ProjectPermissionEnum.GET_PROJECT),
+	projectsController.getAllProjects,
+);
+
+projectsRegistry.registerPath({
 	method: 'post',
 	path: '/projects',
 	tags: ['Projects'],
 	request: CreateProjectRequestSchema,
-	responses: createApiResponse(projectResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(GetProjectsResponseDTOSchema, 'Success', StatusCodes.OK),
 });
 
 router.post(
@@ -52,23 +77,10 @@ router.post(
 
 projectsRegistry.registerPath({
 	method: 'get',
-	path: '/projects',
-	tags: ['Projects'],
-	responses: createApiResponse(projectResponseDtoSchema, 'Success', StatusCodes.OK),
-});
-router.get(
-	'/',
-	authMiddleware.verifyAccessToken,
-	authMiddleware.verifySystemPermission(ProjectPermissionEnum.GET_PROJECT),
-	projectsController.getAllProjects,
-);
-
-projectsRegistry.registerPath({
-	method: 'get',
 	path: '/projects/{projectId}',
 	tags: ['Projects'],
 	request: GetProjectByIdRequestSchema,
-	responses: createApiResponse(projectResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(GetProjectResponseDTOSchema, 'Success', StatusCodes.OK),
 });
 router.get(
 	'/:projectId',
@@ -83,7 +95,7 @@ projectsRegistry.registerPath({
 	path: '/projects/{projectId}',
 	tags: ['Projects'],
 	request: UpdateInformationRequestSchema,
-	responses: createApiResponse(projectResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(GetProjectResponseDTOSchema, 'Success', StatusCodes.OK),
 });
 
 router.patch(
@@ -105,8 +117,22 @@ projectsRegistry.registerPath({
 router.patch(
 	'/:projectId/archive',
 	authMiddleware.verifyAccessToken,
-	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.UPDATE_PROJECT),
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.ARCHIVE_PROJECT),
 	projectsController.archiveProject,
+);
+
+projectsRegistry.registerPath({
+	method: 'patch',
+	path: '/projects/{projectId}/restore',
+	tags: ['Projects'],
+	request: GetProjectByIdRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:projectId/restore',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.UNARCHIVE_PROJECT),
+	projectsController.restoreProject,
 );
 
 projectsRegistry.registerPath({
@@ -122,6 +148,25 @@ router.delete(
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.DELETE_PROJECT),
 	projectsController.deleteProject,
+);
+
+projectsRegistry.registerPath({
+	method: 'get',
+	path: '/projects/{projectId}/members',
+	tags: ['Projects'],
+	request: GetProjectByIdRequestSchema,
+	responses: createApiResponse(
+		GetMembersResponseDTOSchema.array(),
+		'Success',
+		StatusCodes.OK,
+	),
+});
+
+router.get(
+	'/:projectId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.GET_PROJECT),
+	projectsController.getProjectMembers,
 );
 
 projectsRegistry.registerPath({
@@ -143,19 +188,7 @@ projectsRegistry.registerPath({
 	method: 'delete',
 	path: '/projects/{projectId}/members',
 	tags: ['Projects'],
-	request: {
-		params: z.object({
-			projectId: z.string(),
-		}),
-		body: {
-			description: 'Remove a member from project',
-			content: {
-				'application/json': {
-					schema: z.object({ userId: z.string() }),
-				},
-			},
-		},
-	},
+	request: RemoveMemberProjectRequestSchema,
 	responses: createApiResponse(null, 'Success', StatusCodes.OK),
 });
 router.delete(
@@ -187,7 +220,7 @@ projectsRegistry.registerPath({
 	tags: ['Projects'],
 	request: GetProjectByIdRequestSchema,
 	responses: createApiResponse(
-		boardResponseDtoSchema.array(),
+		NewBoardsResponseDTOSchema.array(),
 		'Success',
 		StatusCodes.OK,
 	),

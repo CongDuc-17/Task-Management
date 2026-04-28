@@ -17,6 +17,7 @@ import {
 import { startTokenCleanupScheduler } from './common/utils/tokenCleanup.util';
 import { createServer } from 'http';
 import { createWebSocketServer } from './socket/socket.server';
+import { ProjectsScheduler } from './modules/projects/project.scheduler';
 
 const app: Express = express();
 
@@ -60,6 +61,8 @@ const httpServer = createServer(app);
 createWebSocketServer(httpServer);
 // Start token cleanup scheduler (chạy mỗi 1 giờ)
 startTokenCleanupScheduler(1);
+const projectsScheduler = new ProjectsScheduler();
+projectsScheduler.initCleanupJob();
 
 httpServer.listen(appEnv.PORT, () => {
 	const { NODE_ENV, HOST, PORT } = appEnv;

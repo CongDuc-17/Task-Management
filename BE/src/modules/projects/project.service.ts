@@ -10,12 +10,16 @@ import {
 	PaginationUtils,
 } from '@/common';
 import { CreateProjectRequestDto } from './dtos/requests';
-import { ProjectResponseDto } from './dtos/responses/project.response';
 import { ProjectMembersRepository } from '../projectMembers/projectMember.repository';
 import { RoleStatusEnum } from '@prisma/client';
 import { ProjectRoleEnum } from '@/common/enums/roles';
 import { RolesRepository } from '../roles/roles.repository';
 import { Forbidden } from '@tsed/exceptions';
+import {
+	GetMembersResponseDTO,
+	GetProjectResponseDTO,
+	GetProjectsResponseDTO,
+} from './dtos/responses';
 
 export class ProjectsService {
 	constructor(
@@ -27,7 +31,7 @@ export class ProjectsService {
 	async createProject(
 		createProject: CreateProjectRequestDto,
 		userId: string,
-	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto>> {
+	): Promise<HttpResponseBodySuccessDto<GetProjectResponseDTO>> {
 		const projectAdminRole = await this.rolesRepository.findByName(
 			ProjectRoleEnum.PROJECT_ADMIN,
 		);
@@ -39,51 +43,40 @@ export class ProjectsService {
 			createProject.name,
 			createProject.description,
 		);
-		const admin = await this.projectMembersRepository.assignUserRoleProject(
+		await this.projectMembersRepository.assignUserRoleProject(
 			project.id,
 			userId,
 			projectAdminRole.id,
 		);
 		return {
 			success: true,
-			data: new ProjectResponseDto({
+			data: new GetProjectResponseDTO({
 				...project,
 				description: project.description ?? undefined,
-				role: projectAdminRole.id,
-			}),
-		};
-	}
-
-	async getProjectById(
-		projectId: string,
-		userId: string,
-	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto>> {
-		const project = await this.projectsRepository.getProjectById(projectId);
-		if (!project) {
-			throw new NotFoundException('Project not found');
-		}
-
-		return {
-			success: true,
-			data: new ProjectResponseDto({
-				...project,
-				description: project.description ?? undefined,
+				status: project.status,
+				createdAt: project.createdAt,
+				updatedAt: project.updatedAt,
+				membersCount: 1,
+				boardsCount: 0,
 			}),
 		};
 	}
 
 	async getAllProjects(
 		userId: string,
-	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto[]>> {
+	): Promise<HttpResponseBodySuccessDto<GetProjectsResponseDTO[]>> {
 		const userProjects =
 			await this.projectMembersRepository.getProjectsOfUser(userId);
 
 		const projects = userProjects.map(
 			(up) =>
-				new ProjectResponseDto({
+				new GetProjectsResponseDTO({
 					...up.project,
 					description: up.project.description ?? undefined,
-					role: up.roleId,
+					roleId: up.role.id,
+					roleName: up.role.name,
+					membersCount: up.project._count.members,
+					boardsCount: up.project._count.boards,
 				}),
 		);
 
@@ -93,21 +86,45 @@ export class ProjectsService {
 		};
 	}
 
-	async updateInformationProject(
+	async getProjectById(
 		projectId: string,
 		userId: string,
-		updateData: Partial<CreateProjectRequestDto>,
-	): Promise<HttpResponseBodySuccessDto<ProjectResponseDto>> {
+	): Promise<HttpResponseBodySuccessDto<GetProjectResponseDTO>> {
 		const project = await this.projectsRepository.getProjectById(projectId);
 		if (!project) {
 			throw new NotFoundException('Project not found');
 		}
+
 		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
 			projectId,
 			userId,
 		);
 		if (!isMember) {
 			throw new Forbidden('You are not a member of this project');
+		}
+
+		return {
+			success: true,
+			data: new GetProjectResponseDTO({
+				...project,
+				description: project.description ?? undefined,
+				status: project.status,
+				createdAt: project.createdAt,
+				updatedAt: project.updatedAt,
+				membersCount: project._count.members,
+				boardsCount: project._count.boards,
+			}),
+		};
+	}
+
+	async updateInformationProject(
+		projectId: string,
+
+		updateData: Partial<CreateProjectRequestDto>,
+	): Promise<HttpResponseBodySuccessDto<GetProjectResponseDTO>> {
+		const project = await this.projectsRepository.getProjectById(projectId);
+		if (!project) {
+			throw new NotFoundException('Project not found');
 		}
 
 		const updatePayload: any = {};
@@ -127,9 +144,14 @@ export class ProjectsService {
 			console.log('No changes detected, skipping update.');
 			return {
 				success: true,
-				data: new ProjectResponseDto({
+				data: new GetProjectResponseDTO({
 					...project,
 					description: project.description ?? undefined,
+					status: project.status,
+					createdAt: project.createdAt,
+					updatedAt: project.updatedAt,
+					membersCount: project._count.members,
+					boardsCount: project._count.boards,
 				}),
 			};
 		}
@@ -141,30 +163,54 @@ export class ProjectsService {
 
 		return {
 			success: true,
-			data: new ProjectResponseDto({
+			data: new GetProjectResponseDTO({
 				...updatedProject,
 				description: updatedProject.description ?? undefined,
+				status: updatedProject.status,
+				createdAt: updatedProject.createdAt,
+				updatedAt: updatedProject.updatedAt,
 			}),
 		};
 	}
 
-	async archiveProject(
+	async archiveProject(projectId: string): Promise<HttpResponseBodySuccessDto<null>> {
+		const project = await this.projectsRepository.getProjectById(projectId);
+		if (!project) {
+			throw new NotFoundException('Project not found');
+		}
+
+		await this.projectsRepository.archiveProject(projectId);
+
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
+	async restoreProject(projectId: string): Promise<HttpResponseBodySuccessDto<null>> {
+		const project = await this.projectsRepository.getProjectById(projectId);
+		if (!project) {
+			throw new NotFoundException('Project not found');
+		}
+		if (project.status !== 'ARCHIVED') {
+			throw new OptionalException(400, 'Only archived project can be restored');
+		}
+		await this.projectsRepository.restoreProject(projectId);
+
+		return {
+			success: true,
+			data: null,
+		};
+	}
+
+	async softDeleteProject(
 		projectId: string,
-		userId: string,
 	): Promise<HttpResponseBodySuccessDto<null>> {
 		const project = await this.projectsRepository.getProjectById(projectId);
 		if (!project) {
 			throw new NotFoundException('Project not found');
 		}
-		const isMember = await this.projectMembersRepository.isUserMemberOfProject(
-			projectId,
-			userId,
-		);
-		if (!isMember) {
-			throw new Forbidden('You are not a member of this project');
-		}
-
-		await this.projectsRepository.archiveProject(projectId);
+		await this.projectsRepository.softDeleteProject(projectId);
 
 		return {
 			success: true,
@@ -204,6 +250,34 @@ export class ProjectsService {
 			}
 			throw new InternalServerException();
 		}
+	}
+
+	async getProjectMembers(
+		projectId: string,
+	): Promise<HttpResponseBodySuccessDto<GetMembersResponseDTO[]>> {
+		const existingProject = await this.projectsRepository.getProjectById(projectId);
+		if (!existingProject) {
+			throw new NotFoundException('Project not found');
+		}
+		const members = await this.projectMembersRepository.getProjectMembers(projectId);
+		const membersResponse = members.map(
+			(m) =>
+				new GetMembersResponseDTO({
+					projectId: m.projectId,
+					id: m.user.id,
+					name: m.user.name,
+					email: m.user.email,
+					avatar: m.user.avatar,
+					acceptedAt: m.accepted ? m.invitedAt : null,
+					invitedAt: m.invitedAt,
+					roleId: m.role.id,
+					roleName: m.role.name,
+				}),
+		);
+		return {
+			success: true,
+			data: membersResponse,
+		};
 	}
 
 	async changeRoleMemberProject(
