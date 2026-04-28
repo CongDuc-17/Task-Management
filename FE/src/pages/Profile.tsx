@@ -79,7 +79,7 @@ export function Profile() {
       if (avatarFile) {
         formData.append("avatar", avatarFile);
       }
-      console.log("Submitting profile update with data:");
+
       for (let [key, value] of formData.entries()) {
         console.log(`${key}:`, value);
       }

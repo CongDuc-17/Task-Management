@@ -78,6 +78,20 @@ export function Board() {
   const [archivedLists, setArchivedLists] = useState<ArchivedList[]>([]);
   const [isDragOverArchive, setIsDragOverArchive] = useState(false);
 
+  const [previewBackground, setPreviewBackground] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    return () => {
+      // Hàm cleanup này sẽ chạy trước khi useEffect chạy lần tiếp theo,
+      // hoặc khi component Board unmount
+      if (previewBackground) {
+        URL.revokeObjectURL(previewBackground);
+      }
+    };
+  }, [previewBackground]);
+  const displayBackground = previewBackground || board?.background;
+
   const listIds = useMemo(() => lists.map((list) => list.id), [lists]);
   const listIdsKey = listIds.join(",");
 
@@ -556,7 +570,6 @@ export function Board() {
       return currentOrder.filter((id) => id !== list.id);
     });
 
-    toast.success(`Archived list "${list.name}"`);
     try {
       await apiClient.patch(`/lists/${list.id}/archive`);
       toast.success(`Archived list "${list.name}"`);
@@ -726,7 +739,6 @@ export function Board() {
       return nextOrder;
     });
 
-    toast.success(`Restored list "${list.name}"`);
     try {
       await apiClient.patch(`/lists/${list.id}/restore`);
       await fetchLists(boardId);
@@ -752,10 +764,11 @@ export function Board() {
       <div
         className="flex h-full w-full flex-col overflow-hidden"
         style={
-          board?.background
+          displayBackground
             ? {
-                backgroundImage: `url(${board.background})`,
+                backgroundImage: `url(${displayBackground})`,
                 backgroundSize: "cover",
+                backgroundPosition: "center",
               }
             : {}
         }
@@ -765,6 +778,7 @@ export function Board() {
           boardName={board?.name}
           boardMembers={board?.members ?? []}
           fetchBoard={fetchBoard}
+          onPreviewBackground={setPreviewBackground}
         />
 
         <KanbanBoardProvider>

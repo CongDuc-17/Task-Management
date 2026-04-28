@@ -52,8 +52,21 @@ export function ProjectDetail() {
             !error &&
             boards.map((b) => (
               <Link to={`/boards/${b.id}`} key={b.id}>
-                <Card className="h-36 cursor-pointer hover:shadow-lg transition-shadow relative">
-                  <div className="absolute bottom-0 w-full text-center p-2 bg-gray-100 rounded-b-lg font-medium">
+                <Card
+                  className="h-36 cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden group"
+                  style={
+                    b.background
+                      ? {
+                          backgroundImage: `url(${b.background})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : { backgroundColor: "#f3f4f6" }
+                  }
+                >
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+
+                  <div className="absolute bottom-0 w-full text-center p-2 bg-white/90 backdrop-blur-sm font-medium border-t">
                     {b.name}
                   </div>
                 </Card>
