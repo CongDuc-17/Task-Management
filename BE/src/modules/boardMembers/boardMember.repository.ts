@@ -1,23 +1,72 @@
+import { BoardStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 export class BoardMembersRepository {
 	constructor(private readonly prisma = new PrismaService()) {}
 
-	async getBoardsOfUser(userId: string) {
+	async getBoardsOfUserInProject(
+		projectId: string,
+		userId: string,
+		skip = 0,
+		take = 20,
+	) {
 		return this.prisma.boardMembers.findMany({
-			where: { userId },
+			where: {
+				userId,
+				board: {
+					projectId,
+					status: BoardStatusEnum.ACTIVE,
+				},
+			},
+			skip,
+			take,
 			select: {
-				roleId: true,
+				id: true,
+				userId: true,
+				boardId: true,
+				role: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
 				board: {
 					select: {
 						id: true,
 						name: true,
 						description: true,
+						background: true,
+						status: true,
+						_count: {
+							select: {
+								lists: true,
+								boardMembers: true,
+							},
+						},
 					},
 				},
 			},
+			orderBy: {
+				invitedAt: 'desc',
+			},
 		});
 	}
+
+	// async getBoardsOfUser(userId: string) {
+	// 	return this.prisma.boardMembers.findMany({
+	// 		where: { userId },
+	// 		select: {
+	// 			roleId: true,
+	// 			board: {
+	// 				select: {
+	// 					id: true,
+	// 					name: true,
+	// 					description: true,
+	// 				},
+	// 			},
+	// 		},
+	// 	});
+	// }
 	async assignUserRoleBoard(boardId: string, userId: string, roleId: string) {
 		return this.prisma.boardMembers.create({
 			data: {

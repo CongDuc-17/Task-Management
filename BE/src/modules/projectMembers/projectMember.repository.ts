@@ -3,10 +3,14 @@ import { PrismaService } from '../database/prisma.service';
 export class ProjectMembersRepository {
 	constructor(private readonly prisma = new PrismaService()) {}
 
-	async getProjectsOfUser(userId: string) {
+	async getProjectsOfUser(userId: string, skip = 0, take = 10) {
 		return this.prisma.projectMembers.findMany({
 			where: { userId },
-			include: {
+			skip,
+			take,
+			select: {
+				id: true,
+				projectId: true,
 				role: {
 					select: {
 						id: true,
@@ -18,35 +22,20 @@ export class ProjectMembersRepository {
 						id: true,
 						name: true,
 						description: true,
-						boards: {
+						status: true,
+
+						_count: {
 							select: {
-								id: true,
-								name: true,
-								description: true,
-								background: true,
-								status: true,
+								boards: true,
+								members: true,
 							},
 						},
-						members: {
-							include: {
-								user: {
-									select: {
-										id: true,
-										name: true,
-										email: true,
-										avatar: true,
-									},
-								},
-								role: {
-									select: {
-										id: true,
-										name: true,
-									},
-								},
-							},
-						},
-						_count: { select: { members: true } },
 					},
+				},
+			},
+			orderBy: {
+				project: {
+					createdAt: 'desc',
 				},
 			},
 		});
@@ -61,6 +50,7 @@ export class ProjectMembersRepository {
 			},
 		});
 	}
+
 	async isUserMemberOfProject(projectId: string, userId: string) {
 		const m = await this.prisma.projectMembers.findFirst({
 			where: { projectId, userId },
@@ -75,11 +65,19 @@ export class ProjectMembersRepository {
 		});
 		return m;
 	}
-
-	async getProjectMembers(projectId: string) {
+	async getProjectMembers(projectId: string, skip = 0, take = 20) {
 		return this.prisma.projectMembers.findMany({
-			where: { projectId },
-			include: {
+			where: {
+				projectId,
+			},
+			skip,
+			take,
+			select: {
+				id: true,
+				userId: true,
+				projectId: true,
+				accepted: true,
+				invitedAt: true,
 				user: {
 					select: {
 						id: true,
@@ -94,6 +92,9 @@ export class ProjectMembersRepository {
 						name: true,
 					},
 				},
+			},
+			orderBy: {
+				invitedAt: 'desc',
 			},
 		});
 	}

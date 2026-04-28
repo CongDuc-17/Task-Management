@@ -28,7 +28,7 @@ export const UpdateRoleMemberProjectRequestValidationSchema: ZodValidationSchema
 export const UpdateRoleMemberProjectRequestSchema = {
 	params: updateRoleMemberProjectRequestParams,
 	body: {
-		desciption: 'Update role of a member in project',
+		description: 'Update role of a member in project',
 		content: {
 			'application/json': {
 				schema: updateRoleMemberProjectRequestBody,

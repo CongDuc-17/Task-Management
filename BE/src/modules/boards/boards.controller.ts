@@ -3,12 +3,14 @@ import { BoardsService } from './boards.service';
 import {
 	BoardResponseDto,
 	CreateBoardRequestDto,
+	NewBoardsResponseDto,
 	UpdateInformationBoardRequestDto,
 } from './dtos';
 import { Exception } from '@tsed/exceptions';
 import { HttpResponseDto, OptionalException } from '@/common';
 import { boardMembers } from '@/models/modelSchema/boardMembersSchema';
 import { StatusCodes } from 'http-status-codes';
+import { cidrv4 } from 'zod';
 export class BoardsController {
 	constructor(private boardsService: BoardsService = new BoardsService()) {}
 	async createBoard(req: Request): Promise<Response> {
@@ -30,11 +32,14 @@ export class BoardsController {
 	async getBoards(req: Request): Promise<Response> {
 		const projectId = req.params.projectId as string;
 		const userId = (req.user as { id: string }).id;
-		const result = await this.boardsService.getBoardsByProjectId(projectId, userId);
+		const result = await this.boardsService.getBoardsOfUserInProject(
+			projectId,
+			userId,
+		);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<BoardResponseDto[]>(result);
+		return new HttpResponseDto().success<NewBoardsResponseDto[]>(result);
 	}
 
 	async getBoardById(req: Request): Promise<Response> {

@@ -18,6 +18,7 @@ import {
 	BoardResponseDto,
 	CreateBoardRequestDto,
 	UpdateInformationBoardRequestDto,
+	NewBoardsResponseDto,
 } from './dtos';
 import { BoardRoleEnum } from '@/common/enums/roles';
 import { ProjectsRepository } from '../projects/project.repository';
@@ -88,30 +89,36 @@ export class BoardsService {
 		};
 	}
 
-	async getBoardsByProjectId(
+	async getBoardsOfUserInProject(
 		projectId: string,
 		userId: string,
-	): Promise<HttpResponseBodySuccessDto<BoardResponseDto[]>> {
+	): Promise<HttpResponseBodySuccessDto<NewBoardsResponseDto[]>> {
 		const project = await this.projectsRepository.getProjectById(projectId);
 		if (!project) {
 			throw new NotFoundException('Project not found');
 		}
-		const isMemberProject = await this.projectMembersRepository.isUserMemberOfProject(
+
+		const boards = await this.boardMembersRepository.getBoardsOfUserInProject(
 			projectId,
 			userId,
 		);
-		if (!isMemberProject) {
-			throw new Forbidden('You are not a member of this project');
-		}
-		const boards = await this.boardsRepository.getBoardsByProjectId(projectId);
+
 		const boardDtos = boards.map(
 			(board) =>
-				new BoardResponseDto({
-					...board,
-					description: board.description ?? undefined,
-					background: board.background ?? undefined,
+				new NewBoardsResponseDto({
+					projectId: projectId,
+					id: board.boardId,
+					name: board.board.name,
+					description: board.board.description ?? undefined,
+					background: board.board.background ?? undefined,
+					status: board.board.status,
+					_count: {
+						lists: board.board._count.lists,
+						members: board.board._count.boardMembers,
+					},
 				}),
 		);
+
 		return {
 			success: true,
 			data: boardDtos,

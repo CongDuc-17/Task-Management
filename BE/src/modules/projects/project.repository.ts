@@ -26,46 +26,27 @@ export class ProjectsRepository {
 		});
 	}
 
-	async getProjectById(projectId: string): Promise<projects | null> {
+	async getProjectById(projectId: string) {
 		return this.prismaService.projects.findUnique({
 			where: { id: projectId },
-			include: {
-				_count: { select: { members: true } },
-				members: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatar: true,
-							},
-						},
-						role: {
-							select: {
-								id: true,
-								name: true,
-							},
-						},
-					},
-				},
-				boards: {
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				status: true,
+				createdAt: true,
+				updatedAt: true,
+				_count: {
 					select: {
-						id: true,
-						name: true,
-						description: true,
-						background: true,
-						status: true,
+						members: true,
+						boards: true,
 					},
 				},
 			},
 		});
 	}
 
-	async updateProject(
-		projectId: string,
-		data: Prisma.projectsUpdateInput,
-	): Promise<projects> {
+	async updateProject(projectId: string, data: Prisma.projectsUpdateInput) {
 		return this.prismaService.projects.update({
 			where: { id: projectId },
 			data,
@@ -75,24 +56,85 @@ export class ProjectsRepository {
 	async archiveProject(projectId: string): Promise<projects> {
 		return this.prismaService.projects.update({
 			where: { id: projectId },
-			data: { status: ProjectStatusEnum.ARCHIVED, deletedAt: new Date() },
+			data: { status: ProjectStatusEnum.ARCHIVED },
 		});
 	}
 
-	async deleteProject(projectId: string): Promise<projects> {
+	async restoreProject(projectId: string): Promise<projects> {
+		return this.prismaService.projects.update({
+			where: { id: projectId },
+			data: {
+				status: ProjectStatusEnum.ACTIVE,
+			},
+		});
+	}
+
+	async softDeleteProject(projectId: string): Promise<projects> {
+		return this.prismaService.projects.update({
+			where: { id: projectId },
+			data: {
+				deletedAt: new Date(),
+				status: ProjectStatusEnum.ARCHIVED,
+			},
+		});
+	}
+
+	async deleteProject(projectId: string): Promise<void> {
+		const project = await this.prismaService.projects.findUnique({
+			where: { id: projectId },
+		});
+
+		if (!project || !project.deletedAt) {
+			throw new Error('Project not found or not marked for deletion');
+		}
+
+		const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+		if (project.deletedAt > fifteenDaysAgo) {
+			throw new Error('Project is still within 15-day grace period');
+		}
+
 		await this.prismaService.projectMembers.deleteMany({
-			where: { projectId: projectId },
+			where: { projectId },
 		});
 
 		const boards = await this.prismaService.boards.findMany({
-			where: { projectId: projectId },
+			where: { projectId },
 			select: { id: true },
 		});
+
 		await Promise.all(
 			boards.map((board) => this.boardsRepository.deleteBoard(board.id)),
 		);
-		return this.prismaService.projects.delete({
+
+		await this.prismaService.projects.delete({
 			where: { id: projectId },
 		});
+	}
+
+	async cleanupExpiredProjects(): Promise<number> {
+		const fifteenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+		const expiredProjects = await this.prismaService.projects.findMany({
+			where: {
+				deletedAt: { lt: fifteenDaysAgo },
+			},
+			select: { id: true },
+		});
+
+		let deleteCount = 0;
+
+		for (const project of expiredProjects) {
+			try {
+				await this.deleteProject(project.id);
+				deleteCount++;
+			} catch (error) {
+				console.error(
+					`[ProjectsRepository] Failed to delete project ${project.id}:`,
+					error,
+				);
+			}
+		}
+
+		return deleteCount;
 	}
 }
