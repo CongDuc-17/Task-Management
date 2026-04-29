@@ -112,7 +112,7 @@ export class ProjectsRepository {
 	}
 
 	async cleanupExpiredProjects(): Promise<number> {
-		const fifteenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+		const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
 
 		const expiredProjects = await this.prismaService.projects.findMany({
 			where: {

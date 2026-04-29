@@ -31,40 +31,30 @@ export class BoardsRepository {
 			},
 		});
 	}
-	async getBoardById(boardId: string): Promise<boards | null> {
+	async getBoardById(boardId: string) {
 		return this.prismaService.boards.findUnique({
 			where: { id: boardId },
-			include: {
-				_count: { select: { boardMembers: true } },
-				boardMembers: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatar: true,
-							},
-						},
-						role: {
-							select: {
-								id: true,
-								name: true,
-							},
-						},
-					},
-				},
-				lists: {
-					where: { deletedAt: null },
-					include: {
-						_count: { select: { cards: true } },
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				projectId: true,
+				status: true,
+				background: true,
+				createdAt: true,
+				updatedAt: true,
+
+				_count: {
+					select: {
+						lists: true,
+						boardMembers: true,
 					},
 				},
 			},
 		});
 	}
 
-	async updateBoard(boardId: string, data: Partial<boards>): Promise<boards> {
+	async updateBoard(boardId: string, data: Partial<boards>) {
 		return this.prismaService.boards.update({
 			where: { id: boardId },
 			data,

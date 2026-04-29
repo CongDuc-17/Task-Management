@@ -1,13 +1,24 @@
+import { ProjectStatusEnum } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 export class ProjectMembersRepository {
 	constructor(private readonly prisma = new PrismaService()) {}
 
-	async getProjectsOfUser(userId: string, skip = 0, take = 10) {
+	async getProjectsOfUser({
+		userId,
+		status,
+		skip,
+		take,
+	}: {
+		userId: string;
+		status?: ProjectStatusEnum;
+		skip: number;
+		take: number;
+	}) {
 		return this.prisma.projectMembers.findMany({
-			where: { userId },
-			skip,
-			take,
+			where: { userId, project: { status } },
+			skip: skip,
+			take: take,
 			select: {
 				id: true,
 				projectId: true,
@@ -65,13 +76,21 @@ export class ProjectMembersRepository {
 		});
 		return m;
 	}
-	async getProjectMembers(projectId: string, skip = 0, take = 20) {
+	async getProjectMembers({
+		projectId,
+		skip,
+		take,
+	}: {
+		projectId: string;
+		skip: number;
+		take: number;
+	}) {
 		return this.prisma.projectMembers.findMany({
 			where: {
 				projectId,
 			},
-			skip,
-			take,
+			skip: skip,
+			take: take,
 			select: {
 				id: true,
 				userId: true,

@@ -4,22 +4,29 @@ import { PrismaService } from '../database/prisma.service';
 export class BoardMembersRepository {
 	constructor(private readonly prisma = new PrismaService()) {}
 
-	async getBoardsOfUserInProject(
-		projectId: string,
-		userId: string,
+	async getBoardsOfUserInProject({
+		projectId,
+		userId,
+		status,
 		skip = 0,
 		take = 20,
-	) {
+	}: {
+		projectId: string;
+		userId: string;
+		status?: BoardStatusEnum;
+		skip: number;
+		take: number;
+	}) {
 		return this.prisma.boardMembers.findMany({
 			where: {
 				userId,
 				board: {
 					projectId,
-					status: BoardStatusEnum.ACTIVE,
+					status: status,
 				},
 			},
-			skip,
-			take,
+			skip: skip,
+			take: take,
 			select: {
 				id: true,
 				userId: true,
@@ -52,21 +59,6 @@ export class BoardMembersRepository {
 		});
 	}
 
-	// async getBoardsOfUser(userId: string) {
-	// 	return this.prisma.boardMembers.findMany({
-	// 		where: { userId },
-	// 		select: {
-	// 			roleId: true,
-	// 			board: {
-	// 				select: {
-	// 					id: true,
-	// 					name: true,
-	// 					description: true,
-	// 				},
-	// 			},
-	// 		},
-	// 	});
-	// }
 	async assignUserRoleBoard(boardId: string, userId: string, roleId: string) {
 		return this.prisma.boardMembers.create({
 			data: {

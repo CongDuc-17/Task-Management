@@ -32,7 +32,7 @@ export class NewBoardMemberDto {
 	}
 }
 
-export class NewBoardsResponseDto {
+export class BoardsResponseDto {
 	projectId: string;
 	id: string;
 	name: string;
@@ -65,7 +65,7 @@ export class NewBoardsResponseDto {
 	}
 }
 
-export const NewBoardsResponseDTOSchema = z.object({
+export const BoardsResponseDTOSchema = z.object({
 	projectId: z.string(),
 	id: z.string(),
 	name: z.string(),

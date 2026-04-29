@@ -1,87 +1,60 @@
+import { BoardStatusEnum } from '@prisma/client';
 import { z } from 'zod';
 
-export class BoardMemberDto {
-	id: string;
-	// userId: string;
-	// accepted: boolean;
-	user: {
-		id: string;
-		name: string;
-		email: string;
-		avatar: string | null;
-	};
-	role: {
-		id: string;
-		name: string;
-	};
-
-	constructor(data: any) {
-		this.id = data.id;
-		// this.userId = data.userId;
-		// this.accepted = data.accepted;
-		this.user = {
-			id: data.user.id,
-			name: data.user.name,
-			email: data.user.email,
-			avatar: data.user.avatar,
-		};
-		this.role = {
-			id: data.role.id,
-			name: data.role.name,
-		};
-	}
-}
-
-export class BoardResponseDto {
+export class GetBoardResponseDto {
 	id: string;
 	name: string;
 	description?: string;
 	projectId: string;
-	memberCount: number;
-	members?: BoardMemberDto[];
+	status: BoardStatusEnum;
 	background?: string;
+	roleId: string;
+	roleName: string;
+	createdAt: Date;
+	updatedAt: Date;
+	memberCount: number;
+	listCount: number;
 
 	constructor(data: {
 		id: string;
 		name: string;
 		description?: string;
 		projectId: string;
-		_count?: { boardMembers: number };
-		boardMembers?: any[];
+		status: BoardStatusEnum;
 		background?: string;
+		roleId: string;
+		roleName: string;
+		createdAt: Date;
+		updatedAt: Date;
+		memberCount: number;
+		listCount: number;
 	}) {
 		this.id = data.id;
 		this.name = data.name;
 		this.description = data.description;
 		this.projectId = data.projectId;
+		this.status = data.status;
 		this.background = data.background;
-		this.memberCount = data._count?.boardMembers ?? 0;
-		this.members = data.boardMembers?.map((member) => new BoardMemberDto(member));
+		this.roleId = data.roleId;
+		this.roleName = data.roleName;
+		this.memberCount = data.memberCount;
+		this.listCount = data.listCount;
+		this.createdAt = data.createdAt;
+		this.updatedAt = data.updatedAt;
 	}
 }
 
-const boardMemberDtoSchema = z.object({
-	id: z.string(),
-	// userId: z.string(),
-	// accepted: z.boolean(),
-	user: z.object({
-		id: z.string(),
-		name: z.string(),
-		email: z.string(),
-		avatar: z.string().nullable(),
-	}),
-	role: z.object({
-		id: z.string(),
-		name: z.string(),
-	}),
-});
-
-export const boardResponseDtoSchema = z.object({
+export const getBoardResponseDtoSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	background: z.string().optional(),
 	description: z.string().optional(),
 	projectId: z.string(),
+	status: z.enum(BoardStatusEnum),
+	roleId: z.string(),
+	roleName: z.string(),
 	memberCount: z.number(),
-	members: boardMemberDtoSchema.array().optional(),
+	listCount: z.number(),
+	createdAt: z.date(),
+	updatedAt: z.date(),
 });

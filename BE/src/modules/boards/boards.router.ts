@@ -7,17 +7,13 @@ import { BoardPermissionEnum } from '@/common/enums/permissions/boardPermission.
 
 import { StatusCodes } from 'http-status-codes/build/cjs/status-codes';
 import {
-	boardResponseDtoSchema,
 	GetBoardByIdRequestSchema,
+	updateBoardResponseDtoSchema,
 	UpdateInformationBoardRequestSchema,
+	getBoardMembersResponseDtoSchema,
 } from './dtos';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
-import {
-	createListRequestSchema,
-	createListRequestValidationSchema,
-	listResponseDtoSchema,
-	updateListRequestParams,
-} from '../lists/dtos';
+import { createListRequestSchema, listResponseDtoSchema } from '../lists/dtos';
 import { ListsController } from '../lists/list.controller';
 import { validateRequestMiddleware } from '@/common/middlewares/validationRequest.middleware';
 import { ListPermissionEnum } from '@/common/enums/permissions';
@@ -32,6 +28,7 @@ import { LabelResponseDtoSchema } from '../labels/dtos/responses';
 import { LabelsController } from '../labels/labels.controller';
 import { UploadBackgroundRequestSchema } from './dtos/requests/uploadBackground.request';
 import { uploadAvatarMiddleware } from '@/common/middlewares/upload.middleware';
+import { getBoardResponseDtoSchema } from './dtos/responses/getBoard.response';
 
 const boardsController = new BoardsController();
 const listsController = new ListsController();
@@ -48,7 +45,7 @@ boardsRegistry.registerPath({
 	path: '/boards/{boardId}',
 	tags: ['Boards'],
 	request: GetBoardByIdRequestSchema,
-	responses: createApiResponse(boardResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(getBoardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.get(
 	'/:boardId',
@@ -62,7 +59,7 @@ boardsRegistry.registerPath({
 	path: '/boards/{boardId}',
 	tags: ['Boards'],
 	request: UpdateInformationBoardRequestSchema,
-	responses: createApiResponse(boardResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(updateBoardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.patch(
 	'/:boardId',
@@ -86,6 +83,20 @@ router.patch(
 );
 
 boardsRegistry.registerPath({
+	method: 'patch',
+	path: '/boards/{boardId}/restore',
+	tags: ['Boards'],
+	request: GetBoardByIdRequestSchema,
+	responses: createApiResponse(null, 'Success', StatusCodes.OK),
+});
+router.patch(
+	'/:boardId/restore',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
+	boardsController.restoreBoard,
+);
+
+boardsRegistry.registerPath({
 	method: 'delete',
 	path: '/boards/{boardId}',
 	tags: ['Boards'],
@@ -97,6 +108,24 @@ router.delete(
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyBoardPermission(BoardPermissionEnum.DELETE_BOARD),
 	boardsController.deleteBoard,
+);
+
+boardsRegistry.registerPath({
+	method: 'get',
+	path: '/boards/{boardId}/members',
+	tags: ['Boards'],
+	request: GetBoardByIdRequestSchema,
+	responses: createApiResponse(
+		getBoardMembersResponseDtoSchema.array(),
+		'Success',
+		StatusCodes.OK,
+	),
+});
+router.get(
+	'/:boardId/members',
+	authMiddleware.verifyAccessToken,
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.GET_BOARD),
+	boardsController.getBoardMembers,
 );
 
 boardsRegistry.registerPath({
@@ -119,9 +148,7 @@ boardsRegistry.registerPath({
 	path: '/boards/{boardId}/members',
 	tags: ['Boards'],
 	request: {
-		params: z.object({
-			boardId: z.string(),
-		}),
+		params: GetBoardByIdRequestSchema.params,
 		body: {
 			description: 'Remove a member from board',
 			content: {
@@ -212,7 +239,7 @@ boardsRegistry.registerPath({
 	path: '/boards/{boardId}/background',
 	tags: ['Boards'],
 	request: UploadBackgroundRequestSchema,
-	responses: createApiResponse(boardResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(updateBoardResponseDtoSchema, 'Success', StatusCodes.OK),
 });
 router.post(
 	'/:boardId/background',
