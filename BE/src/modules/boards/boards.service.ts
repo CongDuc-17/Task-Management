@@ -116,13 +116,14 @@ export class BoardsService {
 			pagination,
 		);
 
-		const boards = await this.boardMembersRepository.getBoardsOfUserInProject({
-			projectId,
-			userId,
-			status: status as BoardStatusEnum,
-			skip: paginationUtils.skip,
-			take: paginationUtils.take,
-		});
+		const [boards, totalBoards] =
+			await this.boardMembersRepository.getBoardsOfUserInProject({
+				projectId,
+				userId,
+				status: status as BoardStatusEnum,
+				skip: paginationUtils.skip,
+				take: paginationUtils.take,
+			});
 
 		const boardDtos = boards.map(
 			(board) =>
@@ -143,9 +144,8 @@ export class BoardsService {
 		return {
 			success: true,
 			data: boardDtos,
-			pagination: paginationUtils.convertPaginationResponseDtoFromTotalRecords(
-				boardDtos.length,
-			),
+			pagination:
+				paginationUtils.convertPaginationResponseDtoFromTotalRecords(totalBoards),
 		};
 	}
 
@@ -275,6 +275,7 @@ export class BoardsService {
 		}
 		await this.boardsRepository.updateBoard(boardId, {
 			status: BoardStatusEnum.ACTIVE,
+			deletedAt: null,
 		});
 		return {
 			success: true,

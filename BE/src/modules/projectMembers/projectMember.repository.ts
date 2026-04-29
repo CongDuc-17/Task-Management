@@ -15,41 +15,46 @@ export class ProjectMembersRepository {
 		skip: number;
 		take: number;
 	}) {
-		return this.prisma.projectMembers.findMany({
-			where: { userId, project: { status } },
-			skip: skip,
-			take: take,
-			select: {
-				id: true,
-				projectId: true,
-				role: {
-					select: {
-						id: true,
-						name: true,
+		return Promise.all([
+			this.prisma.projectMembers.findMany({
+				where: { userId, project: { status } },
+				skip: skip,
+				take: take,
+				select: {
+					id: true,
+					projectId: true,
+					role: {
+						select: {
+							id: true,
+							name: true,
+						},
 					},
-				},
-				project: {
-					select: {
-						id: true,
-						name: true,
-						description: true,
-						status: true,
+					project: {
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							status: true,
 
-						_count: {
-							select: {
-								boards: true,
-								members: true,
+							_count: {
+								select: {
+									boards: true,
+									members: true,
+								},
 							},
 						},
 					},
 				},
-			},
-			orderBy: {
-				project: {
-					createdAt: 'desc',
+				orderBy: {
+					project: {
+						createdAt: 'desc',
+					},
 				},
-			},
-		});
+			}),
+			this.prisma.projectMembers.count({
+				where: { userId, project: { status } },
+			}),
+		]);
 	}
 
 	async assignUserRoleProject(projectId: string, userId: string, roleId: string) {
@@ -85,37 +90,44 @@ export class ProjectMembersRepository {
 		skip: number;
 		take: number;
 	}) {
-		return this.prisma.projectMembers.findMany({
-			where: {
-				projectId,
-			},
-			skip: skip,
-			take: take,
-			select: {
-				id: true,
-				userId: true,
-				projectId: true,
-				accepted: true,
-				invitedAt: true,
-				user: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatar: true,
+		return Promise.all([
+			this.prisma.projectMembers.findMany({
+				where: {
+					projectId,
+				},
+				skip: skip,
+				take: take,
+				select: {
+					id: true,
+					userId: true,
+					projectId: true,
+					accepted: true,
+					invitedAt: true,
+					user: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							avatar: true,
+						},
+					},
+					role: {
+						select: {
+							id: true,
+							name: true,
+						},
 					},
 				},
-				role: {
-					select: {
-						id: true,
-						name: true,
-					},
+				orderBy: {
+					invitedAt: 'desc',
 				},
-			},
-			orderBy: {
-				invitedAt: 'desc',
-			},
-		});
+			}),
+			this.prisma.projectMembers.count({
+				where: {
+					projectId,
+				},
+			}),
+		]);
 	}
 
 	async changeRoleOfMemberProject(

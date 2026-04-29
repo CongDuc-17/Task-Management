@@ -4,7 +4,6 @@ import {
 	HttpResponseBodySuccessDto,
 	InternalServerException,
 	NotFoundException,
-	ObjectComparerDto,
 	OptionalException,
 	PaginationDto,
 	PaginationUtils,
@@ -20,7 +19,6 @@ import {
 	GetProjectResponseDTO,
 	GetProjectsResponseDTO,
 } from './dtos/responses';
-import { skip } from 'node:test';
 
 export class ProjectsService {
 	constructor(
@@ -72,14 +70,15 @@ export class ProjectsService {
 			pagination,
 		);
 		const { status } = getProjectsRequest;
-		const userProjects = await this.projectMembersRepository.getProjectsOfUser({
-			userId: userId,
-			status: status as ProjectStatusEnum,
-			skip: paginationUtils.skip,
-			take: paginationUtils.take,
-		});
+		const [projectsOfUser, totalProjectsOfUser] =
+			await this.projectMembersRepository.getProjectsOfUser({
+				userId: userId,
+				status: status as ProjectStatusEnum,
+				skip: paginationUtils.skip,
+				take: paginationUtils.take,
+			});
 
-		const projects = userProjects.map(
+		const projects = projectsOfUser.map(
 			(up) =>
 				new GetProjectsResponseDTO({
 					...up.project,
@@ -94,9 +93,10 @@ export class ProjectsService {
 		return {
 			success: true,
 			data: projects,
-			pagination: paginationUtils.convertPaginationResponseDtoFromTotalRecords(
-				projects.length,
-			),
+			pagination:
+				paginationUtils.convertPaginationResponseDtoFromTotalRecords(
+					totalProjectsOfUser,
+				),
 		};
 	}
 
@@ -277,11 +277,12 @@ export class ProjectsService {
 		const paginationUtils = new PaginationUtils().extractSkipTakeFromPagination(
 			pagination,
 		);
-		const members = await this.projectMembersRepository.getProjectMembers({
-			projectId: projectId,
-			skip: paginationUtils.skip,
-			take: paginationUtils.take,
-		});
+		const [members, totalMembers] =
+			await this.projectMembersRepository.getProjectMembers({
+				projectId: projectId,
+				skip: paginationUtils.skip,
+				take: paginationUtils.take,
+			});
 		const membersResponse = members.map(
 			(m) =>
 				new GetMembersResponseDTO({
@@ -299,9 +300,10 @@ export class ProjectsService {
 		return {
 			success: true,
 			data: membersResponse,
-			pagination: paginationUtils.convertPaginationResponseDtoFromTotalRecords(
-				membersResponse.length,
-			),
+			pagination:
+				paginationUtils.convertPaginationResponseDtoFromTotalRecords(
+					totalMembers,
+				),
 		};
 	}
 

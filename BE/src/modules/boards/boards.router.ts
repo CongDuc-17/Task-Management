@@ -78,7 +78,7 @@ boardsRegistry.registerPath({
 router.patch(
 	'/:boardId/archive',
 	authMiddleware.verifyAccessToken,
-	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.ARCHIVE_BOARD),
 	boardsController.archiveBoard,
 );
 
@@ -92,7 +92,7 @@ boardsRegistry.registerPath({
 router.patch(
 	'/:boardId/restore',
 	authMiddleware.verifyAccessToken,
-	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UPDATE_BOARD),
+	authMiddleware.verifyBoardPermission(BoardPermissionEnum.UNARCHIVE_BOARD),
 	boardsController.restoreBoard,
 );
 

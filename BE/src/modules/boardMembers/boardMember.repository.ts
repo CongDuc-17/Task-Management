@@ -17,46 +17,57 @@ export class BoardMembersRepository {
 		skip: number;
 		take: number;
 	}) {
-		return this.prisma.boardMembers.findMany({
-			where: {
-				userId,
-				board: {
-					projectId,
-					status: status,
-				},
-			},
-			skip: skip,
-			take: take,
-			select: {
-				id: true,
-				userId: true,
-				boardId: true,
-				role: {
-					select: {
-						id: true,
-						name: true,
+		return Promise.all([
+			this.prisma.boardMembers.findMany({
+				where: {
+					userId,
+					board: {
+						projectId,
+						status: status,
 					},
 				},
-				board: {
-					select: {
-						id: true,
-						name: true,
-						description: true,
-						background: true,
-						status: true,
-						_count: {
-							select: {
-								lists: true,
-								boardMembers: true,
+				skip: skip,
+				take: take,
+				select: {
+					id: true,
+					userId: true,
+					boardId: true,
+					role: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
+					board: {
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							background: true,
+							status: true,
+							_count: {
+								select: {
+									lists: true,
+									boardMembers: true,
+								},
 							},
 						},
 					},
 				},
-			},
-			orderBy: {
-				invitedAt: 'desc',
-			},
-		});
+				orderBy: {
+					invitedAt: 'desc',
+				},
+			}),
+			this.prisma.boardMembers.count({
+				where: {
+					userId,
+					board: {
+						projectId,
+						status: status,
+					},
+				},
+			}),
+		]);
 	}
 
 	async assignUserRoleBoard(boardId: string, userId: string, roleId: string) {

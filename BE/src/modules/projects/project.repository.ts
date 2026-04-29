@@ -65,6 +65,7 @@ export class ProjectsRepository {
 			where: { id: projectId },
 			data: {
 				status: ProjectStatusEnum.ACTIVE,
+				deletedAt: null,
 			},
 		});
 	}
