@@ -8,6 +8,12 @@ import { autoBindUtil, validateRequestMiddleware } from '@/common';
 import {
 	CreateProjectRequestSchema,
 	CreateProjectRequestValidationSchema,
+	GetBoardsOfProjectRequestSchema,
+	GetBoardsOfProjectRequestValidationSchema,
+	GetMembersRequestSchema,
+	GetMembersRequestValidationSchema,
+	getProjectsRequestSchema,
+	UpdateRoleMemberProjectRequestValidationSchema,
 } from './dtos/requests';
 import { createApiResponse } from '@/swagger/openAPIResponseBuilders';
 import authMiddleware from '@/common/middlewares/auth.middleware';
@@ -21,11 +27,7 @@ import {
 	UpdateInformationRequestValidationSchema,
 } from './dtos/requests/updateInformation.request';
 import { UpdateRoleMemberProjectRequestSchema } from './dtos/requests';
-import {
-	boardResponseDtoSchema,
-	CreateBoardRequestSchema,
-	NewBoardsResponseDTOSchema,
-} from '../boards/dtos';
+import { CreateBoardRequestSchema, BoardsResponseDTOSchema } from '../boards/dtos';
 import { BoardsController } from '../boards/boards.controller';
 
 import { GetProjectsResponseDTOSchema } from './dtos/responses/getProjects.response';
@@ -46,6 +48,7 @@ projectsRegistry.registerPath({
 	method: 'get',
 	path: '/projects',
 	tags: ['Projects'],
+	request: getProjectsRequestSchema,
 	responses: createApiResponse(
 		GetProjectsResponseDTOSchema.array(),
 		'Success',
@@ -56,6 +59,7 @@ router.get(
 	'/',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifySystemPermission(ProjectPermissionEnum.GET_PROJECT),
+	validateRequestMiddleware(getProjectsRequestSchema),
 	projectsController.getAllProjects,
 );
 
@@ -64,7 +68,7 @@ projectsRegistry.registerPath({
 	path: '/projects',
 	tags: ['Projects'],
 	request: CreateProjectRequestSchema,
-	responses: createApiResponse(GetProjectsResponseDTOSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(GetProjectResponseDTOSchema, 'Success', StatusCodes.OK),
 });
 
 router.post(
@@ -154,7 +158,7 @@ projectsRegistry.registerPath({
 	method: 'get',
 	path: '/projects/{projectId}/members',
 	tags: ['Projects'],
-	request: GetProjectByIdRequestSchema,
+	request: GetMembersRequestSchema,
 	responses: createApiResponse(
 		GetMembersResponseDTOSchema.array(),
 		'Success',
@@ -166,6 +170,7 @@ router.get(
 	'/:projectId/members',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.GET_PROJECT),
+	validateRequestMiddleware(GetMembersRequestValidationSchema),
 	projectsController.getProjectMembers,
 );
 
@@ -181,6 +186,7 @@ router.patch(
 	'/:projectId/members',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(ProjectPermissionEnum.UPDATE_MEMBER_ROLE),
+	validateRequestMiddleware(UpdateRoleMemberProjectRequestValidationSchema),
 	projectsController.changeRoleMemberProject,
 );
 
@@ -203,7 +209,7 @@ projectsRegistry.registerPath({
 	path: '/projects/{projectId}/boards',
 	tags: ['Projects'],
 	request: CreateBoardRequestSchema,
-	responses: createApiResponse(boardResponseDtoSchema, 'Success', StatusCodes.OK),
+	responses: createApiResponse(BoardsResponseDTOSchema, 'Success', StatusCodes.OK),
 });
 
 router.post(
@@ -218,9 +224,9 @@ projectsRegistry.registerPath({
 	method: 'get',
 	path: '/projects/{projectId}/boards',
 	tags: ['Projects'],
-	request: GetProjectByIdRequestSchema,
+	request: GetBoardsOfProjectRequestSchema,
 	responses: createApiResponse(
-		NewBoardsResponseDTOSchema.array(),
+		BoardsResponseDTOSchema.array(),
 		'Success',
 		StatusCodes.OK,
 	),
@@ -229,6 +235,7 @@ router.get(
 	'/:projectId/boards',
 	authMiddleware.verifyAccessToken,
 	authMiddleware.verifyProjectPermission(BoardPermissionEnum.GET_BOARD),
+	validateRequestMiddleware(GetBoardsOfProjectRequestValidationSchema),
 	boardsController.getBoards,
 );
 export const projectsRouter = router;

@@ -5,6 +5,8 @@ import { HttpResponseDto } from '@/common/dtos/httpResponse.dto';
 import { Exception } from '@tsed/exceptions';
 import { GetProjectsResponseDTO } from './dtos/responses/getProjects.response';
 import { GetMembersResponseDTO, GetProjectResponseDTO } from './dtos/responses';
+import { PaginationDto } from '@/common/dtos/pagination.dto';
+import { GetProjectsRequestDto } from './dtos/requests';
 export class ProjectsController {
 	constructor(
 		private readonly projectService: ProjectsService = new ProjectsService(),
@@ -22,7 +24,15 @@ export class ProjectsController {
 
 	async getAllProjects(req: Request): Promise<Response> {
 		const userId = (req.user as { id: string }).id;
-		const result = await this.projectService.getAllProjects(userId);
+		const pagination: PaginationDto = new PaginationDto(req.query);
+		const getProjectsRequest: GetProjectsRequestDto = new GetProjectsRequestDto(
+			req.query,
+		);
+		const result = await this.projectService.getAllProjects(
+			userId,
+			getProjectsRequest,
+			pagination,
+		);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
@@ -83,7 +93,8 @@ export class ProjectsController {
 
 	async getProjectMembers(req: Request): Promise<Response> {
 		const projectId = req.params.projectId as string;
-		const result = await this.projectService.getProjectMembers(projectId);
+		const pagination: PaginationDto = new PaginationDto(req.query);
+		const result = await this.projectService.getProjectMembers(projectId, pagination);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}

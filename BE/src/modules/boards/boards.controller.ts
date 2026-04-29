@@ -1,16 +1,19 @@
 import { Request, Response } from 'express';
 import { BoardsService } from './boards.service';
 import {
-	BoardResponseDto,
 	CreateBoardRequestDto,
-	NewBoardsResponseDto,
+	BoardsResponseDto,
+	UpdateBoardResponseDto,
 	UpdateInformationBoardRequestDto,
+	GetBoardMembersResponseDto,
 } from './dtos';
 import { Exception } from '@tsed/exceptions';
-import { HttpResponseDto, OptionalException } from '@/common';
+import { HttpResponseDto, OptionalException, PaginationDto } from '@/common';
 import { boardMembers } from '@/models/modelSchema/boardMembersSchema';
 import { StatusCodes } from 'http-status-codes';
-import { cidrv4 } from 'zod';
+import { GetBoardsOfProjectRequestDto } from '../projects/dtos/requests';
+import { GetBoardResponseDto } from './dtos/responses/getBoard.response';
+
 export class BoardsController {
 	constructor(private boardsService: BoardsService = new BoardsService()) {}
 	async createBoard(req: Request): Promise<Response> {
@@ -26,42 +29,47 @@ export class BoardsController {
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<BoardResponseDto>(result);
+		return new HttpResponseDto().success<GetBoardResponseDto>(result);
 	}
 
 	async getBoards(req: Request): Promise<Response> {
 		const projectId = req.params.projectId as string;
+		const pagination: PaginationDto = new PaginationDto(req.query);
+
+		const status: GetBoardsOfProjectRequestDto = new GetBoardsOfProjectRequestDto(
+			req.query,
+		);
 		const userId = (req.user as { id: string }).id;
 		const result = await this.boardsService.getBoardsOfUserInProject(
 			projectId,
 			userId,
+			status,
+			pagination,
 		);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<NewBoardsResponseDto[]>(result);
+		return new HttpResponseDto().success<BoardsResponseDto[]>(result);
 	}
 
 	async getBoardById(req: Request): Promise<Response> {
 		const boardId = req.params.boardId as string;
-
 		const userId = (req.user as { id: string }).id;
-		const result = await this.boardsService.getBoardById(boardId);
+		const result = await this.boardsService.getBoardById(boardId, userId);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<BoardResponseDto>(result);
+		return new HttpResponseDto().success<GetBoardResponseDto>(result);
 	}
 
 	async updateBoardInformation(req: Request): Promise<Response> {
 		const boardId = req.params.boardId as string;
 		const updateBoardDto = new UpdateInformationBoardRequestDto(req.body);
-
 		const result = await this.boardsService.updateBoard(boardId, updateBoardDto);
 		if (result instanceof Exception) {
 			return new HttpResponseDto().exception(result);
 		}
-		return new HttpResponseDto().success<BoardResponseDto>(result);
+		return new HttpResponseDto().success<UpdateBoardResponseDto>(result);
 	}
 
 	async uploadBackground(req: Request, res: Response): Promise<Response> {
@@ -96,6 +104,16 @@ export class BoardsController {
 		return new HttpResponseDto().success<null>(result);
 	}
 
+	async restoreBoard(req: Request): Promise<Response> {
+		const boardId = req.params.boardId as string;
+
+		const result = await this.boardsService.restoreBoard(boardId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<null>(result);
+	}
+
 	async deleteBoard(req: Request): Promise<Response> {
 		const boardId = req.params.boardId as string;
 
@@ -104,6 +122,15 @@ export class BoardsController {
 			return new HttpResponseDto().exception(result);
 		}
 		return new HttpResponseDto().success<null>(result);
+	}
+
+	async getBoardMembers(req: Request): Promise<Response> {
+		const boardId = req.params.boardId as string;
+		const result = await this.boardsService.getBoardMembers(boardId);
+		if (result instanceof Exception) {
+			return new HttpResponseDto().exception(result);
+		}
+		return new HttpResponseDto().success<GetBoardMembersResponseDto[]>(result);
 	}
 
 	async changeRoleOfMemberBoard(req: Request): Promise<Response> {

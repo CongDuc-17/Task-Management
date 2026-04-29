@@ -4,14 +4,13 @@ import {
 	HttpResponseBodySuccessDto,
 	InternalServerException,
 	NotFoundException,
-	ObjectComparerDto,
 	OptionalException,
 	PaginationDto,
 	PaginationUtils,
 } from '@/common';
-import { CreateProjectRequestDto } from './dtos/requests';
+import { CreateProjectRequestDto, GetProjectsRequestDto } from './dtos/requests';
 import { ProjectMembersRepository } from '../projectMembers/projectMember.repository';
-import { RoleStatusEnum } from '@prisma/client';
+import { ProjectStatusEnum, RoleStatusEnum } from '@prisma/client';
 import { ProjectRoleEnum } from '@/common/enums/roles';
 import { RolesRepository } from '../roles/roles.repository';
 import { Forbidden } from '@tsed/exceptions';
@@ -64,11 +63,22 @@ export class ProjectsService {
 
 	async getAllProjects(
 		userId: string,
+		getProjectsRequest: GetProjectsRequestDto,
+		pagination: PaginationDto,
 	): Promise<HttpResponseBodySuccessDto<GetProjectsResponseDTO[]>> {
-		const userProjects =
-			await this.projectMembersRepository.getProjectsOfUser(userId);
+		const paginationUtils = new PaginationUtils().extractSkipTakeFromPagination(
+			pagination,
+		);
+		const { status } = getProjectsRequest;
+		const [projectsOfUser, totalProjectsOfUser] =
+			await this.projectMembersRepository.getProjectsOfUser({
+				userId: userId,
+				status: status as ProjectStatusEnum,
+				skip: paginationUtils.skip,
+				take: paginationUtils.take,
+			});
 
-		const projects = userProjects.map(
+		const projects = projectsOfUser.map(
 			(up) =>
 				new GetProjectsResponseDTO({
 					...up.project,
@@ -83,6 +93,10 @@ export class ProjectsService {
 		return {
 			success: true,
 			data: projects,
+			pagination:
+				paginationUtils.convertPaginationResponseDtoFromTotalRecords(
+					totalProjectsOfUser,
+				),
 		};
 	}
 
@@ -192,7 +206,7 @@ export class ProjectsService {
 		if (!project) {
 			throw new NotFoundException('Project not found');
 		}
-		if (project.status !== 'ARCHIVED') {
+		if (project.status !== ProjectStatusEnum.ARCHIVED) {
 			throw new OptionalException(400, 'Only archived project can be restored');
 		}
 		await this.projectsRepository.restoreProject(projectId);
@@ -254,12 +268,21 @@ export class ProjectsService {
 
 	async getProjectMembers(
 		projectId: string,
+		pagination: PaginationDto,
 	): Promise<HttpResponseBodySuccessDto<GetMembersResponseDTO[]>> {
 		const existingProject = await this.projectsRepository.getProjectById(projectId);
 		if (!existingProject) {
 			throw new NotFoundException('Project not found');
 		}
-		const members = await this.projectMembersRepository.getProjectMembers(projectId);
+		const paginationUtils = new PaginationUtils().extractSkipTakeFromPagination(
+			pagination,
+		);
+		const [members, totalMembers] =
+			await this.projectMembersRepository.getProjectMembers({
+				projectId: projectId,
+				skip: paginationUtils.skip,
+				take: paginationUtils.take,
+			});
 		const membersResponse = members.map(
 			(m) =>
 				new GetMembersResponseDTO({
@@ -277,6 +300,10 @@ export class ProjectsService {
 		return {
 			success: true,
 			data: membersResponse,
+			pagination:
+				paginationUtils.convertPaginationResponseDtoFromTotalRecords(
+					totalMembers,
+				),
 		};
 	}
 
