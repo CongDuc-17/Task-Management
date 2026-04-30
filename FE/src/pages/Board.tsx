@@ -23,7 +23,7 @@ import { useLists } from "@/hooks/useLists";
 import { useCardsStore, type Card as BoardCard } from "@/stores/cards.store";
 
 import { HeaderBoard } from "@/components/boards/HeaderBoard";
-import { ArchivePopover } from "@/components/boards/Archive";
+import { ArchivePopover } from "@/components/boards/ArchivedOfBoard";
 import { CreateList } from "@/components/lists/CreateList";
 import { CreateCard } from "@/components/cards/CreateCard";
 
@@ -57,13 +57,17 @@ export function Board() {
   const boardId = useParams().boardId as string;
   const navigate = useNavigate();
 
-  const { board, fetchBoard } = useBoards();
+  const { board, boardMembers, fetchBoard, fetchBoardMembers, loading, error } =
+    useBoards();
+
+  const isActiveBoard = board?.status?.toUpperCase() === "ACTIVE";
+
   const {
     lists,
     createList,
     loading: listsLoading,
     fetchLists,
-  } = useLists(boardId);
+  } = useLists(boardId, { enabled: isActiveBoard });
 
   const { cards, setCards } = useCardsStore();
 
@@ -211,12 +215,12 @@ export function Board() {
     }
   };
   useEffect(() => {
-    if (!boardId) {
+    if (!boardId || !isActiveBoard) {
       return;
     }
 
     fetchArchivedLists();
-  }, [boardId]);
+  }, [boardId, isActiveBoard]);
 
   const allListsForArchivedCards = useMemo(() => {
     const merged = [...baseLists, ...archivedLists];
@@ -757,7 +761,22 @@ export function Board() {
       toast.error("Failed to restore list");
     }
   };
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
+  if (error) {
+    return (
+      <div>You do not have access to this board or it has been archived.</div>
+    );
+  }
+
+  if (
+    board?.status?.toUpperCase() === "ARCHIVED" ||
+    board?.status?.toUpperCase() === "ARCHIVE"
+  ) {
+    return <div>This board is archived.</div>;
+  }
   return (
     <>
       <Toaster position="top-right" />
@@ -776,8 +795,9 @@ export function Board() {
         <HeaderBoard
           boardId={boardId}
           boardName={board?.name}
-          boardMembers={board?.members ?? []}
+          boardMembers={boardMembers}
           fetchBoard={fetchBoard}
+          fetchBoardMembers={fetchBoardMembers}
           onPreviewBackground={setPreviewBackground}
         />
 

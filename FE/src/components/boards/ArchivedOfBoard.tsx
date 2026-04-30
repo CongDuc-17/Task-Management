@@ -11,12 +11,15 @@ import { Label } from "../ui/label";
 type ArchiveCard = {
   id: string;
   title: string;
+  listId: string;
+  position: number;
   [key: string]: any;
 };
 
 type ArchiveList = {
   id: string;
   name: string;
+  position: number;
   [key: string]: any;
 };
 
@@ -27,10 +30,10 @@ export type ArchivePopoverProps = {
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
-  onRestoreCard: (card: ArchiveCard) => void;
-  onDeleteCard: (card: ArchiveCard) => void;
-  onRestoreList: (list: ArchiveList) => void;
-  onDeleteList: (list: ArchiveList) => void;
+  onRestoreCard: (card: any) => void;
+  onDeleteCard: (card: any) => void;
+  onRestoreList: (list: any) => void;
+  onDeleteList: (list: any) => void;
 };
 
 export function ArchivePopover({

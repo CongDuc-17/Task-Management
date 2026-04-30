@@ -4,10 +4,7 @@ import { Label } from "@/components/ui/label";
 
 import {
   Avatar,
-  AvatarBadge,
   AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
 import {
@@ -24,7 +21,7 @@ import { Plus, X } from "lucide-react";
 import { useCardsStore } from "@/stores/cards.store";
 export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
   const cardId = useParams().cardId as string;
-  const { board, fetchBoard } = useBoards();
+  const { boardMembers, fetchBoardMembers } = useBoards();
   const { addMember, removeMember } = useCardsStore();
   // Lấy list userId đã có trên card
   const cardMemberIds = membersCard.map(
@@ -38,12 +35,12 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
       });
 
       // Optimistic update
-      const memberToAdd = board?.members?.find((m) => m.user.id === memberId);
+      const memberToAdd = boardMembers.find((member) => member.userId === memberId);
       if (memberToAdd) {
         const newMember = {
           id: memberId,
-          name: memberToAdd.user.name,
-          avatar: memberToAdd.user.avatar,
+          name: memberToAdd.name,
+          avatar: memberToAdd.avatar,
         };
 
         addMember(cardId, newMember);
@@ -64,7 +61,7 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
   }
 
   useEffect(() => {
-    fetchBoard();
+    fetchBoardMembers();
   }, []);
   return (
     <Popover>
@@ -125,27 +122,24 @@ export function AddMember({ membersCard = [] }: { membersCard: any[] }) {
               </Button>
             ))}
             <div className="text-sm text-muted-foreground">Member of board</div>
-            {board?.members
-              ?.filter((member) => !cardMemberIds.includes(member.user.id))
+            {boardMembers
+              .filter((member) => !cardMemberIds.includes(member.userId))
               .map((member, index) => (
                 <Button
                   variant={"outline"}
                   className="flex justify-start h-auto items-center "
                   key={index}
-                  onClick={() => handleAddMemberToCard(member.user.id)}
+                  onClick={() => handleAddMemberToCard(member.userId)}
                 >
                   <div className="flex items-center gap-2">
                     <Avatar key={index}>
-                      <AvatarImage
-                        src={member.user.avatar}
-                        alt={member.user.name}
-                      />
+                      <AvatarImage src={member.avatar} alt={member.name} />
                       <AvatarFallback>
-                        {member.user.name.charAt(0).toUpperCase()}
+                        {member.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
 
-                    <div>{member.user.name}</div>
+                    <div>{member.name}</div>
                   </div>
                 </Button>
               ))}

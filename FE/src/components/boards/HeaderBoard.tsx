@@ -26,6 +26,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import type { BoardMember } from "@/hooks/useBoards";
+import { useNavigate } from "react-router-dom";
 
 export function HeaderBoard({
   boardId,
@@ -33,19 +35,20 @@ export function HeaderBoard({
   boardMembers,
 
   fetchBoard,
+  fetchBoardMembers,
   onPreviewBackground,
 }: {
   boardId: string;
   boardName?: string;
-  boardMembers: string[];
+  boardMembers: BoardMember[];
 
   fetchBoard: () => Promise<void>;
+  fetchBoardMembers: () => Promise<void>;
   onPreviewBackground?: (url: string | null) => void;
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(boardName || "");
-  const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   async function handleUpdateBoardName(name: string) {
     if (!name.trim()) {
@@ -66,8 +69,9 @@ export function HeaderBoard({
   async function handleArchiveBoard() {
     try {
       await apiClient.patch(`/boards/${boardId}/archive`);
-      await fetchBoard();
+      // await fetchBoard();
       toast.success("Board archived successfully");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       toast.error("Failed to archive board");
       console.error("Failed to archive board", error);
@@ -79,7 +83,6 @@ export function HeaderBoard({
   ) => {
     const file = event.target.files?.[0];
     if (file) {
-      setBackgroundFile(file);
       // Tạo URL tạm thời để hiển thị ảnh ngay lập tức
       const objectUrl = URL.createObjectURL(file);
       if (onPreviewBackground) {
@@ -137,7 +140,10 @@ export function HeaderBoard({
       </div>
 
       <div className="flex items-center gap-4">
-        <MembersBoard boardMembers={boardMembers} fetchBoard={fetchBoard} />
+        <MembersBoard
+          boardMembers={boardMembers}
+          fetchBoardMembers={fetchBoardMembers}
+        />
 
         <AlertDialog>
           <DropdownMenu>

@@ -5,11 +5,37 @@ import { useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { Input } from "../ui/input";
 import { useProjectsStore } from "@/stores/projects.store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-export function HeaderProject({ projectId }: { projectId: string }) {
-  const projectName = useProjectsStore(
-    (state) => state.projects.find((p) => p.id === projectId)?.name,
-  );
+export function HeaderProject({
+  projectId,
+  projectName,
+}: {
+  projectId: string;
+  projectName?: string;
+}) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(projectName || "");
 
@@ -19,7 +45,7 @@ export function HeaderProject({ projectId }: { projectId: string }) {
 
   async function handleUpdateProjectName(name: string) {
     if (!name.trim()) {
-      alert("Board name cannot be empty");
+      alert("Project name cannot be empty");
       return;
     }
     try {
@@ -30,6 +56,18 @@ export function HeaderProject({ projectId }: { projectId: string }) {
       updateProjectName(projectId, projectName || "");
     } finally {
       setEditing(false);
+    }
+  }
+
+  async function handleArchiveProject() {
+    try {
+      await apiClient.patch(`/projects/${projectId}/archive`);
+      // await fetchProject();
+      toast.success("Project archived successfully");
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      toast.error("Failed to archive project");
+      console.error("Failed to archive project", error);
     }
   }
 
@@ -70,7 +108,45 @@ export function HeaderProject({ projectId }: { projectId: string }) {
 
         <MembersProject projectId={projectId} />
 
-        <EllipsisVertical />
+        <AlertDialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <EllipsisVertical className="size-5 cursor-pointer" />
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-50" align="start">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Menu</DropdownMenuLabel>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem>Archive this project</DropdownMenuItem>
+              </AlertDialogTrigger>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will archive the project. You can restore it later
+                from the archive settings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+              <AlertDialogAction
+                onClick={handleArchiveProject}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Confirm
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
