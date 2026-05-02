@@ -34,15 +34,17 @@ export function NavMain({ projects }) {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {item.boards?.map((board) => (
-                    <SidebarMenuSubItem key={board.id}>
-                      <SidebarMenuSubButton asChild>
-                        <Link to={`/boards/${board.id}`}>
-                          <span>{board.name}</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
+                  {item.boards
+                    ?.filter((board) => board.status === "ACTIVE")
+                    .map((board) => (
+                      <SidebarMenuSubItem key={board.id}>
+                        <SidebarMenuSubButton asChild>
+                          <Link to={`/boards/${board.id}`}>
+                            <span>{board.name}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </SidebarMenuItem>

@@ -35,18 +35,24 @@ import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useParams } from "react-router";
 import { X } from "lucide-react";
+import type { BoardMember } from "@/hooks/useBoards";
+
+type Role = {
+  id: string;
+  name: string;
+};
 
 export function MembersBoard({
   boardMembers,
-  fetchBoard,
+  fetchBoardMembers,
 }: {
-  boardMembers?: any[];
-  fetchBoard: () => Promise<void>;
+  boardMembers?: BoardMember[];
+  fetchBoardMembers: () => Promise<void>;
 }) {
   const { boardId } = useParams() as { boardId: string };
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [roles, setRoles] = useState([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
 
@@ -89,9 +95,10 @@ export function MembersBoard({
         roleId: newRoleId,
       });
       setMemberRoles((prev) => ({ ...prev, [userId]: newRoleId }));
+      await fetchBoardMembers();
     } catch (error) {
       const message =
-        error?.response?.data?.message || "Error updating member role";
+        (error as any)?.response?.data?.message || "Error updating member role";
       toast.error(message);
       console.error("Error changing role:", error);
     }
@@ -116,11 +123,12 @@ export function MembersBoard({
 
       setEmail("");
       setSelectedRoleId("");
-      await fetchBoard();
+      await fetchBoardMembers();
       console.log("Invitation response:", response);
     } catch (error) {
       console.error("Error inviting member:", error);
-      const message = error?.response?.data?.message || "Error inviting member";
+      const message =
+        (error as any)?.response?.data?.message || "Error inviting member";
       toast.error(message);
     }
   }
@@ -130,10 +138,11 @@ export function MembersBoard({
       await apiClient.delete(`/boards/${boardId}/members`, {
         data: { userId },
       });
-      await fetchBoard();
+      await fetchBoardMembers();
     } catch (error) {
       console.error("Error removing member:", error);
-      const message = error?.response?.data?.message || "Error removing member";
+      const message =
+        (error as any)?.response?.data?.message || "Error removing member";
       toast.error(message);
     }
   }
@@ -147,12 +156,9 @@ export function MembersBoard({
               {boardMembers &&
                 boardMembers?.slice(0, 3).map((member, index) => (
                   <Avatar key={index}>
-                    <AvatarImage
-                      src={member.user.avatar}
-                      alt={member.user.name}
-                    />
+                    <AvatarImage src={member.avatar} alt={member.name} />
                     <AvatarFallback>
-                      {member.user.name.charAt(0).toUpperCase()}
+                      {member.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 ))}
@@ -219,33 +225,30 @@ export function MembersBoard({
               >
                 <div className="flex items-center">
                   <Avatar key={index}>
-                    <AvatarImage
-                      src={member.user.avatar}
-                      alt={member.user.name}
-                    />
+                    <AvatarImage src={member.avatar} alt={member.name} />
                     <AvatarFallback>
-                      {member.user.name.charAt(0).toUpperCase()}
+                      {member.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-4">
-                    <div className="font-bold">{member.user.name}</div>
+                    <div className="font-bold">{member.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {member.user.email}
+                      {member.email}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Select
-                    value={memberRoles[member.user.id] || member.role.id}
+                    value={memberRoles[member.userId] || member.roleId}
                     onValueChange={(newRoleId) =>
-                      handleUpdateMemberRole(member.user.id, newRoleId)
+                      handleUpdateMemberRole(member.userId, newRoleId)
                     }
-                    disabled={member.role.name === "BOARD_ADMIN"}
+                    disabled={member.roleName === "BOARD_ADMIN"}
                   >
                     <SelectTrigger className="w-fit">
                       <SelectValue
-                        placeholder={member.role.name.replace("BOARD_", "")}
+                        placeholder={member.roleName.replace("BOARD_", "")}
                       />
                     </SelectTrigger>
                     <SelectContent>
@@ -260,7 +263,7 @@ export function MembersBoard({
                   </Select>
                   <X
                     className="cursor-pointer text-gray-400 hover:text-red-500 transition"
-                    onClick={() => handleRemoveMember(member.user.id)}
+                    onClick={() => handleRemoveMember(member.userId)}
                   />
                 </div>
               </Card>

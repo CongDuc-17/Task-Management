@@ -7,48 +7,53 @@ import { useProjects } from "@/hooks/useProjects";
 import { useProjectsStore } from "@/stores/projects.store";
 import { Toaster } from "sonner";
 import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 export function ProjectDetail() {
   const projectId = useParams().projectId as string;
-  const { loading, error, getProjectById } = useProjects();
-  const updateProject = useProjectsStore((state) => state.updateProject);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { fetchProjectById, fetchProjectBoards, fetchProjectMembers } =
+    useProjects({ autoFetch: false });
 
-  const handleProjectUpdated = (
-    projectId: string,
-    data: { name?: string; members?: any[] },
-  ) => {
-    const project = getProjectById(projectId);
-    if (project) {
-      updateProject({
-        ...project,
-        ...(data.name && { name: data.name }),
-        ...(data.members && { members: data.members }),
-      });
+  const project = useProjectsStore((state) =>
+    state.projects.find((p) => p.id === projectId),
+  );
+  const boards = project?.boards ?? [];
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
     }
-  };
 
-  const boards = useProjectsStore((state) => {
-    const project = state.projects.find((p) => p.id === projectId);
-    return project?.boards || [];
-  });
+    async function fetchProjectDetailData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await fetchProjectById(projectId);
+        await Promise.all([
+          fetchProjectBoards(projectId),
+          fetchProjectMembers(projectId),
+        ]);
+      } catch (error) {
+        setError(String(error));
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-  const project = getProjectById(projectId);
+    fetchProjectDetailData();
+  }, [projectId]);
 
   return (
     <>
       <Toaster position="top-right" />
-      <HeaderProject
-        projectId={projectId}
-        projectName={project?.name}
-        projectMembers={project?.members}
-        onProjectUpdated={handleProjectUpdated}
-      />
+      <HeaderProject projectId={projectId} projectName={project?.name} />
       <main className="">
         <div className="grid grid-cols-4 gap-6 p-8">
-          {loading && <div>Loading...</div>}
-          {error && <div>Error: {error}</div>}
+          {error && <div>Error: {String(error)}</div>}
 
-          {!loading &&
+          {!isLoading &&
             !error &&
             boards.map((b) => (
               <Link to={`/boards/${b.id}`} key={b.id}>

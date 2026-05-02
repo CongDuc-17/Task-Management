@@ -3,7 +3,7 @@ import { apiClient } from "@/lib/apiClient";
 
 type List = { id: string; name: string; position: number };
 
-export const useLists = (boardId: string) => {
+export const useLists = (boardId: string, options = { enabled: true }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [lists, setLists] = useState<List[]>([]);
@@ -27,8 +27,10 @@ export const useLists = (boardId: string) => {
   }
 
   useEffect(() => {
-    fetchLists(boardId);
-  }, [boardId]);
+    if (options.enabled && boardId) {
+      fetchLists(boardId);
+    }
+  }, [boardId, options.enabled]);
 
   async function createList(
     boardId: string,

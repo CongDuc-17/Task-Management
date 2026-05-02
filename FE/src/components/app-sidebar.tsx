@@ -21,8 +21,7 @@ import { Link } from "react-router";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUserStore();
-  const { projects } = useProjects();
-
+  const { projects } = useProjects({ includeBoards: true });
   const { open, setOpen } = useSidebar();
 
   return (

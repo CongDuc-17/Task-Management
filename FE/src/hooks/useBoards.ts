@@ -2,20 +2,51 @@ import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useProjectsStore } from "@/stores/projects.store";
 import { useParams } from "react-router-dom";
+
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  pagination?: unknown;
+};
+
 type Board = {
   id: string;
+  projectId: string;
   name: string;
   description?: string;
   background?: string;
-  members?: string[];
+  status?: string;
+  roleId?: string;
+  roleName?: string;
+  memberCount?: number;
+  listCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type BoardMember = {
+  boardId: string;
+  userId: string;
+  name: string;
+  email: string;
+  avatar: string;
+  roleId: string;
+  roleName: string;
+};
+
+type BoardLabel = {
+  id: string;
+  name: string;
+  color: string;
 };
 
 export const useBoards = () => {
   const boardId = useParams().boardId as string;
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<unknown>(null);
   const [board, setBoard] = useState<Board | null>(null);
-  const [labelsBoard, setLabelsBoard] = useState([]);
+  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+  const [labelsBoard, setLabelsBoard] = useState<BoardLabel[]>([]);
   const { createBoardToProject } = useProjectsStore();
 
   async function createBoard(
@@ -24,17 +55,24 @@ export const useBoards = () => {
   ) {
     try {
       setLoading(true);
-      console.log("Creating board with data:", data);
-      const response = await apiClient.post(
+      const response = (await apiClient.post(
         `/projects/${projectId}/boards`,
         data,
-      );
-      console.log("Created board:", response.data);
-      createBoardToProject(projectId, response.data);
+      )) as unknown as ApiResponse<Board>;
+
+      createBoardToProject(projectId, {
+        id: response.data.id,
+        projectId: response.data.projectId,
+        name: response.data.name,
+        description: response.data.description,
+        background: response.data.background,
+        status: response.data.status,
+        membersCount: response.data.memberCount,
+        listsCount: response.data.listCount,
+      });
       setLoading(false);
       setError(null);
     } catch (error) {
-      console.error("Failed to create board", error);
       setLoading(false);
       setError(error);
       throw error;
@@ -49,12 +87,11 @@ export const useBoards = () => {
 
     try {
       setLoading(true);
-      const response = await apiClient.get(`/boards/${boardId}`);
-      const boardData = (response as { data?: unknown }).data ?? response;
+      const response = (await apiClient.get(
+        `/boards/${boardId}`,
+      )) as unknown as ApiResponse<Board>;
 
-      if (boardData && typeof boardData === "object") {
-        setBoard(boardData as Board);
-      }
+      setBoard(response.data);
       setError(null);
     } catch (error) {
       console.error("Failed to fetch board", error);
@@ -64,20 +101,43 @@ export const useBoards = () => {
     }
   }
 
-  async function fetchLabelsBoard() {
+  async function fetchBoardMembers() {
+    if (!boardId) {
+      return;
+    }
+
     try {
-      const response = await apiClient.get(`/boards/${boardId}/labels`);
+      const response = (await apiClient.get(
+        `/boards/${boardId}/members`,
+      )) as unknown as ApiResponse<BoardMember[]>;
+
+      setBoardMembers(response.data);
+    } catch (error) {
+      console.error("Error fetching board members:", error);
+      setError(error);
+    }
+  }
+
+  async function fetchLabelsBoard() {
+    if (!boardId) {
+      return;
+    }
+
+    try {
+      const response = (await apiClient.get(
+        `/boards/${boardId}/labels`,
+      )) as unknown as ApiResponse<BoardLabel[]>;
 
       setLabelsBoard(response.data);
     } catch (error) {
       console.error("Error fetching labels for board:", error);
-    } finally {
-      setLoading(false);
+      setError(error);
     }
   }
 
   useEffect(() => {
     fetchBoard();
+    fetchBoardMembers();
     fetchLabelsBoard();
   }, [boardId]);
 
@@ -85,9 +145,11 @@ export const useBoards = () => {
     loading,
     error,
     board,
+    boardMembers,
     labelsBoard,
     createBoard,
     fetchBoard,
+    fetchBoardMembers,
     fetchLabelsBoard,
   };
 };

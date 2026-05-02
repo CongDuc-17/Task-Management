@@ -36,17 +36,26 @@ import { apiClient } from "@/lib/apiClient";
 
 import { X } from "lucide-react";
 import { useProjectsStore } from "@/stores/projects.store";
+import { useProjects } from "@/hooks/useProjects";
+
+type Role = {
+  id: string;
+  name: string;
+};
 
 export function MembersProject({ projectId }: { projectId: string }) {
-  const projectMembers = useProjectsStore(
-    (state) => state.projects.find((p) => p.id === projectId)?.members,
-  );
+  const projectMembers =
+    useProjectsStore(
+      (state) => state.projects.find((p) => p.id === projectId)?.members,
+    ) ?? [];
   const updateProjectMembers = useProjectsStore(
     (state) => state.updateProjectMembers,
   );
+  const { fetchProjectMembers } = useProjects({ autoFetch: false });
+
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [roles, setRoles] = useState([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
 
@@ -67,60 +76,51 @@ export function MembersProject({ projectId }: { projectId: string }) {
   async function fetchRoles() {
     try {
       const response = await apiClient.get("/roles");
-      console.log("Roles response:", response.data);
-      const projectRoles = response.data.filter((role: any) =>
+      const projectRoles = response.data.filter((role: Role) =>
         role.name.startsWith("PROJECT_"),
       );
       setRoles(projectRoles);
-      return projectRoles;
     } catch (error) {
       console.error("Error fetching roles:", error);
     }
   }
+
   useEffect(() => {
     fetchRoles();
   }, []);
 
   async function handleUpdateMemberRole(userId: string, newRoleId: string) {
     try {
-      const response = await apiClient.patch(`/projects/${projectId}/members`, {
-        userId: userId,
+      await apiClient.patch(`/projects/${projectId}/members`, {
+        userId,
         roleId: newRoleId,
       });
       setMemberRoles((prev) => ({ ...prev, [userId]: newRoleId }));
-      console.log("Role change response:", response);
+      await fetchProjectMembers(projectId);
     } catch (error) {
       console.error("Error changing role:", error);
     }
   }
 
   async function handleInvite() {
-    console.log("Inviting email:", email, "to projectId:", projectId);
     if (!validateEmail(email)) {
       return;
     }
 
-    if (!selectedRoleId || selectedRoleId === "") {
+    if (!selectedRoleId) {
       alert("Please select a role");
       return;
     }
 
     try {
-      const response = await apiClient.post(
-        `/invitations/projects/${projectId}`,
-        {
-          email,
-          roleId: selectedRoleId,
-        },
-      );
+      await apiClient.post(`/invitations/projects/${projectId}`, {
+        email,
+        roleId: selectedRoleId,
+      });
 
       setEmail("");
       setSelectedRoleId("");
-
-      updateProjectMembers(projectId, response.data?.members || []);
-      // Cập nhật store mà không re-render parent
-
-      console.log("Invitation response:", response);
+      await fetchProjectMembers(projectId);
     } catch (error) {
       console.error("Error inviting member:", error);
       alert("Error inviting member");
@@ -132,10 +132,11 @@ export function MembersProject({ projectId }: { projectId: string }) {
       await apiClient.delete(`/projects/${projectId}/members`, {
         data: { userId },
       });
-      // Cập nhật store mà không re-render parent
-      const updatedMembers =
-        projectMembers?.filter((m) => m.user.id !== userId) || [];
-      updateProjectMembers(projectId, updatedMembers);
+
+      updateProjectMembers(
+        projectId,
+        projectMembers.filter((member) => member.id !== userId),
+      );
     } catch (error) {
       console.error("Error removing member:", error);
       alert("Error removing member");
@@ -147,20 +148,16 @@ export function MembersProject({ projectId }: { projectId: string }) {
       <form>
         <DialogTrigger asChild>
           <div className="flex flex-row flex-wrap items-center pr-4 gap-6 md:gap-12">
-            <AvatarGroup className="">
-              {projectMembers &&
-                projectMembers?.slice(0, 3).map((member, index) => (
-                  <Avatar key={index}>
-                    <AvatarImage
-                      src={member.user.avatar}
-                      alt={member.user.name}
-                    />
-                    <AvatarFallback>
-                      {member.user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              {projectMembers && projectMembers.length > 3 && (
+            <AvatarGroup>
+              {projectMembers.slice(0, 3).map((member) => (
+                <Avatar key={member.id}>
+                  <AvatarImage src={member.avatar ?? ""} alt={member.name} />
+                  <AvatarFallback>
+                    {member.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {projectMembers.length > 3 && (
                 <AvatarGroupCount>
                   +{projectMembers.length - 3}
                 </AvatarGroupCount>
@@ -169,13 +166,14 @@ export function MembersProject({ projectId }: { projectId: string }) {
           </div>
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-[500px]  max-h-[650px] ">
+        <DialogContent className="sm:max-w-[500px] max-h-[650px]">
           <DialogHeader>
             <DialogTitle>Project Members</DialogTitle>
             <DialogDescription>
               View and manage project members here.
             </DialogDescription>
           </DialogHeader>
+
           <FieldGroup>
             <Field>
               <Label htmlFor="email-1">Email new member</Label>
@@ -194,6 +192,7 @@ export function MembersProject({ projectId }: { projectId: string }) {
               )}
             </Field>
           </FieldGroup>
+
           <DialogFooter>
             <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
               <SelectTrigger className="w-[180px]">
@@ -216,42 +215,38 @@ export function MembersProject({ projectId }: { projectId: string }) {
             <Button onClick={handleInvite}>Invite</Button>
           </DialogFooter>
 
-          {/* members */}
           <div className="max-h-[300px] overflow-y-auto">
-            {projectMembers?.map((member, index) => (
+            {projectMembers.map((member) => (
               <Card
-                key={index}
+                key={member.id}
                 className="mb-2 flex flex-row justify-between items-center gap-4 p-4"
               >
                 <div className="flex items-center">
-                  <Avatar key={index}>
-                    <AvatarImage
-                      src={member.user.avatar}
-                      alt={member.user.name}
-                    />
+                  <Avatar>
+                    <AvatarImage src={member.avatar ?? ""} alt={member.name} />
                     <AvatarFallback>
-                      {member.user.name.charAt(0).toUpperCase()}
+                      {member.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-4">
-                    <div className="font-bold">{member.user.name}</div>
+                    <div className="font-bold">{member.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {member.user.email}
+                      {member.email}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Select
-                    value={memberRoles[member.user.id] || member.role.id}
+                    value={memberRoles[member.id] || member.roleId}
                     onValueChange={(newRoleId) =>
-                      handleUpdateMemberRole(member.user.id, newRoleId)
+                      handleUpdateMemberRole(member.id, newRoleId)
                     }
-                    disabled={member.role.name === "PROJECT_ADMIN"}
+                    disabled={member.roleName === "PROJECT_ADMIN"}
                   >
                     <SelectTrigger className="w-fit">
                       <SelectValue
-                        placeholder={member.role.name.replace("PROJECT_", "")}
+                        placeholder={member.roleName.replace("PROJECT_", "")}
                       />
                     </SelectTrigger>
                     <SelectContent>
@@ -266,7 +261,7 @@ export function MembersProject({ projectId }: { projectId: string }) {
                   </Select>
                   <X
                     className="cursor-pointer text-gray-400 hover:text-red-500 transition"
-                    onClick={() => handleRemoveMember(member.user.id)}
+                    onClick={() => handleRemoveMember(member.id)}
                   />
                 </div>
               </Card>
